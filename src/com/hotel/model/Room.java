@@ -9,6 +9,10 @@ public class Room {
     private double pricePerNight;
     private int capacity;
     private String description;
+    /** Absolute path to a local image file; may be null if no photo. */
+    private String imagePath;
+    private Integer hotelId;
+    private String hotelName;
     private boolean available = true;
 
     public Room() {}
@@ -33,6 +37,12 @@ public class Room {
     public void setCapacity(int capacity) { this.capacity = capacity; }
     public String getDescription() { return description == null ? "" : description; }
     public void setDescription(String description) { this.description = description; }
+    public String getImagePath() { return imagePath; }
+    public void setImagePath(String imagePath) { this.imagePath = imagePath; }
+    public Integer getHotelId() { return hotelId; }
+    public void setHotelId(Integer hotelId) { this.hotelId = hotelId; }
+    public String getHotelName() { return hotelName == null ? "" : hotelName; }
+    public void setHotelName(String hotelName) { this.hotelName = hotelName; }
     public boolean isAvailable() { return available; }
     public void setAvailable(boolean available) { this.available = available; }
 

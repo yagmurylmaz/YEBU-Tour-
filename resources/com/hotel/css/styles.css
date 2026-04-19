@@ -149,3 +149,19 @@
     -fx-font-weight: 700;
     -fx-text-fill: #1f6feb;
 }
+
+.room-gallery {
+    -fx-background-color: #f3f6fb;
+    -fx-background-radius: 12;
+    -fx-padding: 10;
+}
+
+.room-gallery-nav {
+    -fx-padding: 0 6 0 6;
+}
+
+.room-thumb {
+    -fx-background-radius: 10;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.12), 6, 0.15, 0, 1);
+}

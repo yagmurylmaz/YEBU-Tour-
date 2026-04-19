@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.hotel.ui.AdminHotelController"
+            styleClass="root-pane" prefWidth="1100" prefHeight="700">
+    <top>
+        <HBox styleClass="top-nav" alignment="CENTER_LEFT" spacing="12">
+            <ImageView fitHeight="38.0" preserveRatio="true" pickOnBounds="true" styleClass="nav-logo-img">
+                <image>
+                    <Image url="@../images/logo-yebu.png"/>
+                </image>
+            </ImageView>
+            <Text text="Hotel Management" styleClass="nav-brand"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="Back" onAction="#handleBack" styleClass="btn-outline-sm"/>
+            <Button text="Log Out" onAction="#handleLogout" styleClass="btn-outline-sm"/>
+        </HBox>
+    </top>
+
+    <center>
+        <HBox spacing="18" style="-fx-padding: 20;">
+            <ScrollPane fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" prefWidth="390">
+                <content>
+                    <VBox spacing="10" prefWidth="360" styleClass="card">
+                        <Label text="Hotel Details" styleClass="page-title"/>
+
+                        <Label text="Hotel name"/>
+                        <TextField fx:id="hotelNameField" promptText="e.g. YEBU Downtown"/>
+
+                        <Label text="Country"/>
+                        <ComboBox fx:id="countryCombo" prefWidth="230"/>
+
+                        <Label text="City"/>
+                        <TextField fx:id="cityField" promptText="Enter city name"/>
+
+                        <Label text="Address"/>
+                        <TextArea fx:id="addressArea" prefRowCount="3" wrapText="true" promptText="Street, building, district..."/>
+
+                        <Label text="Phone (optional)"/>
+                        <TextField fx:id="phoneField" promptText="+90 ..."/>
+
+                        <Label text="Email (optional)"/>
+                        <TextField fx:id="emailField" promptText="contact@hotel.com"/>
+
+                        <Label text="Hotel photo"/>
+                        <StackPane styleClass="card" maxHeight="210" minHeight="160" prefHeight="190">
+                            <ImageView fx:id="hotelImagePreview" fitWidth="260" fitHeight="160" preserveRatio="true" pickOnBounds="true"/>
+                        </StackPane>
+                        <HBox spacing="8">
+                            <Button text="Select photo…" onAction="#handleSelectPhoto" styleClass="btn-outline"/>
+                            <Button text="Clear photo" onAction="#handleClearPhoto" styleClass="btn-outline-sm"/>
+                        </HBox>
+
+                        <HBox spacing="8">
+                            <Button text="Add" onAction="#handleAddHotel" styleClass="btn-primary"/>
+                            <Button text="Update" onAction="#handleUpdateHotel" styleClass="btn-outline"/>
+                            <Button text="Delete" onAction="#handleDeleteHotel" styleClass="btn-outline"/>
+                            <Button text="Manage Rooms" onAction="#handleManageRooms" styleClass="btn-outline"/>
+                            <Button text="Clear" onAction="#handleClear" styleClass="btn-outline"/>
+                        </HBox>
+                        <Label fx:id="statusLabel" wrapText="true"/>
+                    </VBox>
+                </content>
+            </ScrollPane>
+
+            <TableView fx:id="hotelTable" HBox.hgrow="ALWAYS">
+                <columns>
+                    <TableColumn fx:id="colId" text="ID" prefWidth="70"/>
+                    <TableColumn fx:id="colName" text="Name" prefWidth="210"/>
+                    <TableColumn fx:id="colCountry" text="Country" prefWidth="140"/>
+                    <TableColumn fx:id="colCity" text="City" prefWidth="140"/>
+                    <TableColumn fx:id="colAddress" text="Address" prefWidth="340"/>
+                    <TableColumn fx:id="colPhone" text="Phone" prefWidth="120"/>
+                </columns>
+            </TableView>
+        </HBox>
+    </center>
+</BorderPane>
+

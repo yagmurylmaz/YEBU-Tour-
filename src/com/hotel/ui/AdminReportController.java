@@ -21,6 +21,7 @@ public class AdminReportController {
 
     @FXML
     private void initialize() {
+        if (!SessionManager.getInstance().ensureAdminAccess()) return;
         loadReport();
     }
 

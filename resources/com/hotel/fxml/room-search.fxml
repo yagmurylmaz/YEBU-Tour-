@@ -31,20 +31,38 @@
                 <DatePicker fx:id="checkOutDatePicker"/>
                 <Label text="Room Type"/>
                 <ComboBox fx:id="roomTypeCombo" prefWidth="150"/>
+                <Label text="Hotel"/>
+                <ComboBox fx:id="hotelCombo" prefWidth="180"/>
                 <Button text="Search" onAction="#handleSearch" styleClass="btn-primary"/>
             </HBox>
 
             <Label fx:id="statusLabel"/>
 
-            <TableView fx:id="roomTable" VBox.vgrow="ALWAYS">
-                <columns>
-                    <TableColumn fx:id="colRoomNo" text="Room No" prefWidth="100"/>
-                    <TableColumn fx:id="colType" text="Type" prefWidth="120"/>
-                    <TableColumn fx:id="colPrice" text="Price" prefWidth="140"/>
-                    <TableColumn fx:id="colCapacity" text="Capacity" prefWidth="120"/>
-                    <TableColumn fx:id="colDescription" text="Description" prefWidth="360"/>
-                </columns>
-            </TableView>
+            <HBox spacing="16" VBox.vgrow="ALWAYS">
+                <TableView fx:id="roomTable" prefWidth="640" HBox.hgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="colPhoto" text="Photo" prefWidth="88"/>
+                        <TableColumn fx:id="colRoomNo" text="Room No" prefWidth="100"/>
+                        <TableColumn fx:id="colHotel" text="Hotel" prefWidth="150"/>
+                        <TableColumn fx:id="colType" text="Type" prefWidth="120"/>
+                        <TableColumn fx:id="colPrice" text="Price" prefWidth="140"/>
+                        <TableColumn fx:id="colCapacity" text="Capacity" prefWidth="120"/>
+                        <TableColumn fx:id="colDescription" text="Description" prefWidth="320"/>
+                    </columns>
+                </TableView>
+
+                <VBox spacing="10" prefWidth="360" styleClass="card">
+                    <Label text="Photos" styleClass="page-title"/>
+                    <StackPane styleClass="card" prefHeight="260">
+                        <ImageView fx:id="selectedRoomImageView" fitWidth="320" fitHeight="240" preserveRatio="true" pickOnBounds="true"/>
+                    </StackPane>
+                    <ScrollPane fitToWidth="true" prefHeight="90" hbarPolicy="AS_NEEDED" vbarPolicy="NEVER">
+                        <content>
+                            <HBox fx:id="selectedRoomThumbBar" spacing="8" style="-fx-padding: 6;"/>
+                        </content>
+                    </ScrollPane>
+                </VBox>
+            </HBox>
 
             <HBox alignment="CENTER_RIGHT">
                 <Button text="Make Reservation" onAction="#handleMakeReservation" styleClass="btn-primary"/>

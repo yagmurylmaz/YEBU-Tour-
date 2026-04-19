@@ -39,6 +39,40 @@ public final class DatabaseConnection {
         if (schemaReady) return;
         try (Connection c = getConnection(); Statement st = c.createStatement()) {
             st.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS countries (
+                  id INT AUTO_INCREMENT PRIMARY KEY,
+                  name VARCHAR(128) NOT NULL UNIQUE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+                """);
+            st.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS cities (
+                  id INT AUTO_INCREMENT PRIMARY KEY,
+                  country_id INT NOT NULL,
+                  name VARCHAR(128) NOT NULL,
+                  UNIQUE KEY uq_city_country (country_id, name),
+                  CONSTRAINT fk_city_country FOREIGN KEY (country_id) REFERENCES countries(id) ON DELETE CASCADE,
+                  INDEX idx_city_country (country_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+                """);
+            st.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS hotels (
+                  id INT AUTO_INCREMENT PRIMARY KEY,
+                  name VARCHAR(255) NOT NULL,
+                  country_id INT NOT NULL,
+                  city_id INT NOT NULL,
+                  address_line VARCHAR(512) NOT NULL,
+                  phone VARCHAR(64) NULL,
+                  email VARCHAR(255) NULL,
+                  image_path VARCHAR(1024) NULL,
+                  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  CONSTRAINT fk_hotel_country FOREIGN KEY (country_id) REFERENCES countries(id) ON DELETE RESTRICT,
+                  CONSTRAINT fk_hotel_city FOREIGN KEY (city_id) REFERENCES cities(id) ON DELETE RESTRICT,
+                  INDEX idx_hotel_country (country_id),
+                  INDEX idx_hotel_city (city_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+                """);
+            ensureHotelImageColumn(st);
+            st.executeUpdate("""
                 CREATE TABLE IF NOT EXISTS users (
                   id INT AUTO_INCREMENT PRIMARY KEY,
                   full_name VARCHAR(255) NOT NULL,
@@ -56,7 +90,23 @@ public final class DatabaseConnection {
                   price_per_night DECIMAL(12,2) NOT NULL,
                   capacity INT NOT NULL,
                   description VARCHAR(1024) NOT NULL DEFAULT '',
-                  available TINYINT(1) NOT NULL DEFAULT 1
+                  available TINYINT(1) NOT NULL DEFAULT 1,
+                  image_path VARCHAR(1024) NULL,
+                  hotel_id INT NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+                """);
+            ensureRoomImageColumn(st);
+            ensureRoomHotelColumn(st);
+            st.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS room_images (
+                  id INT AUTO_INCREMENT PRIMARY KEY,
+                  room_id INT NOT NULL,
+                  image_path VARCHAR(1024) NOT NULL,
+                  sort_order INT NOT NULL DEFAULT 0,
+                  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  CONSTRAINT fk_ri_room FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
+                  INDEX idx_ri_room (room_id),
+                  INDEX idx_ri_room_sort (room_id, sort_order)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
                 """);
             st.executeUpdate("""
@@ -74,6 +124,31 @@ public final class DatabaseConnection {
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
                 """);
             st.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS extra_services (
+                  id INT AUTO_INCREMENT PRIMARY KEY,
+                  code VARCHAR(64) NOT NULL UNIQUE,
+                  name VARCHAR(128) NOT NULL,
+                  description VARCHAR(512) NOT NULL DEFAULT '',
+                  price DECIMAL(12,2) NOT NULL,
+                  billing_type VARCHAR(32) NOT NULL DEFAULT 'PER_NIGHT',
+                  active TINYINT(1) NOT NULL DEFAULT 1
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+                """);
+            st.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS reservation_services (
+                  id INT AUTO_INCREMENT PRIMARY KEY,
+                  reservation_id INT NOT NULL,
+                  service_code VARCHAR(64) NOT NULL,
+                  service_name VARCHAR(128) NOT NULL,
+                  unit_price DECIMAL(12,2) NOT NULL,
+                  quantity INT NOT NULL DEFAULT 1,
+                  billing_type VARCHAR(32) NOT NULL DEFAULT 'PER_NIGHT',
+                  line_total DECIMAL(14,2) NOT NULL,
+                  CONSTRAINT fk_rs_reservation FOREIGN KEY (reservation_id) REFERENCES reservations(id) ON DELETE CASCADE,
+                  INDEX idx_rs_reservation (reservation_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+                """);
+            st.executeUpdate("""
                 CREATE TABLE IF NOT EXISTS password_reset_tokens (
                   id INT AUTO_INCREMENT PRIMARY KEY,
                   user_id INT NOT NULL,
@@ -88,6 +163,47 @@ public final class DatabaseConnection {
             schemaReady = true;
         } catch (SQLException e) {
             throw new IllegalStateException("Failed to create database schema: " + e.getMessage(), e);
+        }
+    }
+
+    private static void ensureRoomImageColumn(java.sql.Statement st) throws SQLException {
+        try {
+            st.executeUpdate("ALTER TABLE rooms ADD COLUMN image_path VARCHAR(1024) NULL");
+        } catch (SQLException e) {
+            String msg = e.getMessage() != null ? e.getMessage() : "";
+            if (e.getErrorCode() == 1060 || msg.contains("Duplicate column")) {
+                return;
+            }
+            throw e;
+        }
+    }
+
+    private static void ensureRoomHotelColumn(java.sql.Statement st) throws SQLException {
+        try {
+            st.executeUpdate("ALTER TABLE rooms ADD COLUMN hotel_id INT NULL");
+        } catch (SQLException e) {
+            String msg = e.getMessage() != null ? e.getMessage() : "";
+            if (e.getErrorCode() == 1060 || msg.contains("Duplicate column")) {
+                return;
+            }
+            throw e;
+        }
+        try {
+            st.executeUpdate("ALTER TABLE rooms ADD CONSTRAINT fk_room_hotel FOREIGN KEY (hotel_id) REFERENCES hotels(id) ON DELETE SET NULL");
+        } catch (SQLException e) {
+            // ignore if constraint exists / can't be added
+        }
+    }
+
+    private static void ensureHotelImageColumn(java.sql.Statement st) throws SQLException {
+        try {
+            st.executeUpdate("ALTER TABLE hotels ADD COLUMN image_path VARCHAR(1024) NULL");
+        } catch (SQLException e) {
+            String msg = e.getMessage() != null ? e.getMessage() : "";
+            if (e.getErrorCode() == 1060 || msg.contains("Duplicate column")) {
+                return;
+            }
+            throw e;
         }
     }
 

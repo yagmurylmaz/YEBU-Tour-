@@ -1,0 +1,14 @@
+# Copy to mail.properties in this folder and set SMTP (mail.properties is gitignored).
+
+mail.smtp.host=
+mail.smtp.port=587
+mail.smtp.starttls.enable=true
+mail.smtp.auth=true
+
+mail.user=
+mail.password=
+
+mail.from=
+mail.from.name=YEBU Tour Reservation System
+
+# Optional: mail.debug=true

@@ -34,6 +34,7 @@ public class AdminDashboardController {
 
     @FXML
     private void initialize() {
+        if (!SessionManager.getInstance().ensureAdminAccess()) return;
         setupTableColumns();
         loadData();
     }
@@ -114,6 +115,10 @@ public class AdminDashboardController {
     }
 
     @FXML private void handleManageRooms()  { MainApp.navigateTo("admin-rooms.fxml"); }
+
+    @FXML private void handleManageHotels() { MainApp.navigateTo("admin-hotels.fxml"); }
+
+    @FXML private void handleManageServices() { MainApp.navigateTo("admin-services.fxml"); }
 
     @FXML private void handleReports()      { MainApp.navigateTo("admin-report.fxml"); }
 

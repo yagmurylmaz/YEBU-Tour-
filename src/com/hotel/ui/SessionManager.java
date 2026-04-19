@@ -1,6 +1,8 @@
 package com.hotel.ui;
 
+import com.hotel.MainApp;
 import com.hotel.model.User;
+import javafx.scene.control.Alert;
 
 public class SessionManager {
 
@@ -28,5 +30,17 @@ public class SessionManager {
 
     public boolean isAdmin() {
         return loggedInUser != null && "ADMIN".equals(loggedInUser.getRole());
+    }
+
+    public boolean ensureAdminAccess() {
+        if (isAdmin()) return true;
+        Alert alert = new Alert(Alert.AlertType.WARNING);
+        alert.setTitle("Access Denied");
+        alert.setHeaderText(null);
+        alert.setContentText("This page is for admin users only.");
+        alert.showAndWait();
+        logout();
+        MainApp.navigateTo("login.fxml");
+        return false;
     }
 }

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.hotel.ui.AdminServiceController"
+            styleClass="root-pane" prefWidth="1100" prefHeight="700">
+    <top>
+        <HBox styleClass="top-nav" alignment="CENTER_LEFT" spacing="12">
+            <ImageView fitHeight="38.0" preserveRatio="true" pickOnBounds="true" styleClass="nav-logo-img">
+                <image>
+                    <Image url="@../images/logo-yebu.png"/>
+                </image>
+            </ImageView>
+            <Text text="Extra Services" styleClass="nav-brand"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="Back" onAction="#handleBack" styleClass="btn-outline-sm"/>
+        </HBox>
+    </top>
+    <center>
+        <HBox spacing="18" style="-fx-padding: 20;">
+            <VBox spacing="10" prefWidth="360" styleClass="card">
+                <Label text="Service Details" styleClass="page-title"/>
+                <Label text="Code"/><TextField fx:id="codeField" promptText="BREAKFAST"/>
+                <Label text="Name"/><TextField fx:id="nameField"/>
+                <Label text="Price"/><TextField fx:id="priceField"/>
+                <Label text="Description"/><TextField fx:id="descriptionField"/>
+                <Label text="Billing Type"/><ComboBox fx:id="billingTypeCombo"/>
+                <CheckBox fx:id="activeCheck" text="Active"/>
+                <HBox spacing="8">
+                    <Button text="Add" onAction="#handleAdd" styleClass="btn-primary"/>
+                    <Button text="Update" onAction="#handleUpdate" styleClass="btn-outline"/>
+                    <Button text="Delete" onAction="#handleDelete" styleClass="btn-outline"/>
+                    <Button text="Clear" onAction="#handleClear" styleClass="btn-outline"/>
+                </HBox>
+                <Label fx:id="statusLabel" wrapText="true"/>
+            </VBox>
+            <TableView fx:id="serviceTable" HBox.hgrow="ALWAYS">
+                <columns>
+                    <TableColumn fx:id="colCode" text="Code" prefWidth="140"/>
+                    <TableColumn fx:id="colName" text="Name" prefWidth="180"/>
+                    <TableColumn fx:id="colPrice" text="Price" prefWidth="120"/>
+                    <TableColumn fx:id="colBilling" text="Billing" prefWidth="140"/>
+                    <TableColumn fx:id="colActive" text="Status" prefWidth="120"/>
+                </columns>
+            </TableView>
+        </HBox>
+    </center>
+</BorderPane>
+

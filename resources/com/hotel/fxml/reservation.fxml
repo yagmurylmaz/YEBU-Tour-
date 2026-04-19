@@ -26,6 +26,21 @@
         <HBox spacing="18" style="-fx-padding: 20;">
             <VBox spacing="8" styleClass="card" prefWidth="420">
                 <Label text="Selected Room Information" styleClass="page-title"/>
+                <VBox spacing="8">
+                    <StackPane styleClass="room-gallery">
+                        <ImageView fx:id="roomImageView" fitWidth="380" fitHeight="250" preserveRatio="true" pickOnBounds="true"/>
+                        <HBox alignment="CENTER" spacing="10" styleClass="room-gallery-nav">
+                            <Button fx:id="btnPrevImage" text="‹" onAction="#handlePrevImage" styleClass="btn-outline-sm"/>
+                            <Region HBox.hgrow="ALWAYS"/>
+                            <Button fx:id="btnNextImage" text="›" onAction="#handleNextImage" styleClass="btn-outline-sm"/>
+                        </HBox>
+                    </StackPane>
+                    <ScrollPane fitToWidth="true" prefHeight="90" hbarPolicy="AS_NEEDED" vbarPolicy="NEVER">
+                        <content>
+                            <HBox fx:id="roomThumbBar" spacing="8" style="-fx-padding: 6;"/>
+                        </content>
+                    </ScrollPane>
+                </VBox>
                 <Label text="Room No:"/><Label fx:id="labelRoomNo"/>
                 <Label text="Room Type:"/><Label fx:id="labelRoomType"/>
                 <Label text="Check-in:"/><Label fx:id="labelCheckIn"/>
@@ -36,10 +51,22 @@
 
             <VBox spacing="10" styleClass="card" HBox.hgrow="ALWAYS">
                 <Label text="Extra Services" styleClass="page-title"/>
-                <HBox spacing="10"><CheckBox fx:id="cbBreakfast" text="Breakfast"/><Label fx:id="labelBreakfastPrice"/></HBox>
-                <HBox spacing="10"><CheckBox fx:id="cbGym" text="Gym"/><Label fx:id="labelGymPrice"/></HBox>
-                <HBox spacing="10"><CheckBox fx:id="cbPool" text="Pool"/><Label fx:id="labelPoolPrice"/></HBox>
-                <HBox spacing="10"><CheckBox fx:id="cbParking" text="Parking"/><Label fx:id="labelParkingPrice"/></HBox>
+                <VBox spacing="2">
+                    <HBox spacing="10"><CheckBox fx:id="cbBreakfast" text="Breakfast"/><Label fx:id="labelBreakfastPrice"/></HBox>
+                    <Label fx:id="labelBreakfastDesc" styleClass="text-muted"/>
+                </VBox>
+                <VBox spacing="2">
+                    <HBox spacing="10"><CheckBox fx:id="cbGym" text="Gym"/><Label fx:id="labelGymPrice"/></HBox>
+                    <Label fx:id="labelGymDesc" styleClass="text-muted"/>
+                </VBox>
+                <VBox spacing="2">
+                    <HBox spacing="10"><CheckBox fx:id="cbPool" text="Pool"/><Label fx:id="labelPoolPrice"/></HBox>
+                    <Label fx:id="labelPoolDesc" styleClass="text-muted"/>
+                </VBox>
+                <VBox spacing="2">
+                    <HBox spacing="10"><CheckBox fx:id="cbParking" text="Parking"/><Label fx:id="labelParkingPrice"/></HBox>
+                    <Label fx:id="labelParkingDesc" styleClass="text-muted"/>
+                </VBox>
                 <Separator/>
                 <HBox spacing="8" alignment="CENTER_LEFT">
                     <Label text="Total Amount:" styleClass="page-title"/>

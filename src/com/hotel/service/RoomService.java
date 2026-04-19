@@ -34,12 +34,20 @@ public class RoomService {
         return roomDAO.findAll();
     }
 
+    public List<Room> getRoomsByHotelId(int hotelId) {
+        return roomDAO.findByHotelId(hotelId);
+    }
+
     public Optional<Room> getRoomById(int roomId) {
         return roomDAO.findById(roomId);
     }
 
     public List<Room> searchAvailableRooms(LocalDate checkIn, LocalDate checkOut, String roomType) {
         return roomDAO.findAvailableRooms(checkIn, checkOut, roomType);
+    }
+
+    public List<Room> searchAvailableRooms(LocalDate checkIn, LocalDate checkOut, String roomType, Integer hotelId) {
+        return roomDAO.findAvailableRooms(checkIn, checkOut, roomType, hotelId);
     }
 
     private void validateRoom(Room room) {

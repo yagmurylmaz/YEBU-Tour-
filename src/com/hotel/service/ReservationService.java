@@ -5,6 +5,7 @@ import com.hotel.database.dao.ReservationDAO;
 import com.hotel.model.Reservation;
 import com.hotel.model.Reservation.Status;
 import com.hotel.model.Room;
+import com.hotel.model.SelectedExtraService;
 import com.hotel.model.Service;
 
 import java.time.LocalDate;
@@ -28,7 +29,15 @@ public class ReservationService implements IReservationService {
         double serviceTotal = 0.0;
         if (services != null) {
             serviceTotal = services.stream()
-                    .mapToDouble(svc -> svc.getPrice() * nights)
+                    .mapToDouble(svc -> {
+                        if (svc instanceof SelectedExtraService ses && "PER_STAY".equalsIgnoreCase(ses.getBillingType())) {
+                            return svc.getPrice() * ses.getQuantity();
+                        }
+                        if (svc instanceof SelectedExtraService ses) {
+                            return svc.getPrice() * nights * ses.getQuantity();
+                        }
+                        return svc.getPrice() * nights;
+                    })
                     .sum();
         }
         return roomTotal + serviceTotal;

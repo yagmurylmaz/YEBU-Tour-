@@ -4,6 +4,7 @@ import com.hotel.database.DatabaseConnection;
 import com.hotel.model.Reservation;
 import com.hotel.model.Reservation.Status;
 import com.hotel.model.Room;
+import com.hotel.model.SelectedExtraService;
 import com.hotel.model.Service;
 
 import java.sql.Connection;
@@ -30,24 +31,70 @@ public class ReservationDAO implements IReservationDAO {
             VALUES (?,?,?,?,?,?,?)
             """;
         try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            ps.setInt(1, reservation.getCustomerId());
-            ps.setInt(2, reservation.getRoomId());
-            ps.setObject(3, reservation.getCheckInDate());
-            ps.setObject(4, reservation.getCheckOutDate());
-            ps.setDouble(5, reservation.getTotalPrice());
-            ps.setString(6, Status.PENDING.name());
-            ps.setString(7, reservation.getCreatedAt());
-            ps.executeUpdate();
-            try (ResultSet keys = ps.getGeneratedKeys()) {
-                if (keys.next()) {
-                    int id = keys.getInt(1);
-                    reservation.setId(id);
-                    return id;
+            boolean oldAutoCommit = c.getAutoCommit();
+            c.setAutoCommit(false);
+            try {
+                ps.setInt(1, reservation.getCustomerId());
+                ps.setInt(2, reservation.getRoomId());
+                ps.setObject(3, reservation.getCheckInDate());
+                ps.setObject(4, reservation.getCheckOutDate());
+                ps.setDouble(5, reservation.getTotalPrice());
+                ps.setString(6, Status.PENDING.name());
+                ps.setString(7, reservation.getCreatedAt());
+                ps.executeUpdate();
+                try (ResultSet keys = ps.getGeneratedKeys()) {
+                    if (keys.next()) {
+                        int id = keys.getInt(1);
+                        reservation.setId(id);
+                        saveReservationServices(c, id, reservation, services);
+                        c.commit();
+                        c.setAutoCommit(oldAutoCommit);
+                        return id;
+                    }
                 }
+                c.rollback();
+                c.setAutoCommit(oldAutoCommit);
+                return -1;
+            } catch (Exception inner) {
+                c.rollback();
+                c.setAutoCommit(oldAutoCommit);
+                throw inner;
             }
-            return -1;
         } catch (Exception e) {
             throw new IllegalStateException("save reservation failed: " + e.getMessage(), e);
+        }
+    }
+
+    private void saveReservationServices(Connection c, int reservationId, Reservation reservation, List<Service> services) throws Exception {
+        if (services == null || services.isEmpty()) return;
+        long nights = java.time.temporal.ChronoUnit.DAYS.between(reservation.getCheckInDate(), reservation.getCheckOutDate());
+        String sql = """
+            INSERT INTO reservation_services (reservation_id, service_code, service_name, unit_price, quantity, billing_type, line_total)
+            VALUES (?,?,?,?,?,?,?)
+            """;
+        try (PreparedStatement ps = c.prepareStatement(sql)) {
+            for (Service svc : services) {
+                String code = svc.getName().toUpperCase();
+                String billingType = "PER_NIGHT";
+                int quantity = 1;
+                if (svc instanceof SelectedExtraService ses) {
+                    code = ses.getCode();
+                    billingType = ses.getBillingType();
+                    quantity = ses.getQuantity();
+                }
+                double lineTotal = "PER_STAY".equalsIgnoreCase(billingType)
+                    ? (svc.getPrice() * quantity)
+                    : (svc.getPrice() * nights * quantity);
+                ps.setInt(1, reservationId);
+                ps.setString(2, code);
+                ps.setString(3, svc.getName());
+                ps.setDouble(4, svc.getPrice());
+                ps.setInt(5, quantity);
+                ps.setString(6, billingType);
+                ps.setDouble(7, lineTotal);
+                ps.addBatch();
+            }
+            ps.executeBatch();
         }
     }
 

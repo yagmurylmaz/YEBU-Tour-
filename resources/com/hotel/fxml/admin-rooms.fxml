@@ -24,31 +24,50 @@
 
     <center>
         <HBox spacing="18" style="-fx-padding: 20;">
-            <VBox spacing="10" prefWidth="330" styleClass="card">
-                <Label text="Room Details" styleClass="page-title"/>
-                <Label text="Room No"/>
-                <TextField fx:id="roomNumberField"/>
-                <Label text="Room Type"/>
-                <ComboBox fx:id="roomTypeCombo"/>
-                <Label text="Price per night"/>
-                <TextField fx:id="priceField"/>
-                <Label text="Capacity"/>
-                <TextField fx:id="capacityField"/>
-                <Label text="Description"/>
-                <TextField fx:id="descriptionField"/>
-                <CheckBox fx:id="availableCheck" text="Available"/>
+            <ScrollPane fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" prefWidth="360">
+                <content>
+                    <VBox spacing="10" prefWidth="330" styleClass="card">
+                        <Label text="Room Details" styleClass="page-title"/>
+                        <Label fx:id="selectedHotelLabel" styleClass="text-muted"/>
+                        <Label text="Room No"/>
+                        <TextField fx:id="roomNumberField"/>
+                        <Label text="Room Type"/>
+                        <ComboBox fx:id="roomTypeCombo"/>
+                        <Label text="Price per night"/>
+                        <TextField fx:id="priceField"/>
+                        <Label text="Capacity"/>
+                        <TextField fx:id="capacityField"/>
+                        <Label text="Description"/>
+                        <TextField fx:id="descriptionField"/>
+                        <Label text="Room photo"/>
+                        <StackPane styleClass="card" maxHeight="240" minHeight="180" prefHeight="220">
+                            <ImageView fx:id="roomImagePreview" fitWidth="220" fitHeight="160" preserveRatio="true" pickOnBounds="true"/>
+                        </StackPane>
+                        <HBox spacing="8">
+                            <Button text="Add photos…" onAction="#handleAddPhotos" styleClass="btn-outline"/>
+                            <Button text="Remove selected" onAction="#handleRemoveSelectedPhoto" styleClass="btn-outline-sm"/>
+                        </HBox>
+                        <ScrollPane fitToWidth="true" prefHeight="110" hbarPolicy="AS_NEEDED" vbarPolicy="NEVER">
+                            <content>
+                                <HBox fx:id="photoThumbBar" spacing="8" style="-fx-padding: 6;"/>
+                            </content>
+                        </ScrollPane>
+                        <CheckBox fx:id="availableCheck" text="Available"/>
 
-                <HBox spacing="8">
-                    <Button text="Add" onAction="#handleAddRoom" styleClass="btn-primary"/>
-                    <Button text="Update" onAction="#handleUpdateRoom" styleClass="btn-outline"/>
-                    <Button text="Delete" onAction="#handleDeleteRoom" styleClass="btn-outline"/>
-                    <Button text="Clear" onAction="#handleClearForm" styleClass="btn-outline"/>
-                </HBox>
-                <Label fx:id="statusLabel" wrapText="true"/>
-            </VBox>
+                        <HBox spacing="8">
+                            <Button text="Add" onAction="#handleAddRoom" styleClass="btn-primary"/>
+                            <Button text="Update" onAction="#handleUpdateRoom" styleClass="btn-outline"/>
+                            <Button text="Delete" onAction="#handleDeleteRoom" styleClass="btn-outline"/>
+                            <Button text="Clear" onAction="#handleClearForm" styleClass="btn-outline"/>
+                        </HBox>
+                        <Label fx:id="statusLabel" wrapText="true"/>
+                    </VBox>
+                </content>
+            </ScrollPane>
 
             <TableView fx:id="roomTable" HBox.hgrow="ALWAYS">
                 <columns>
+                    <TableColumn fx:id="colHotel" text="Hotel" prefWidth="150"/>
                     <TableColumn fx:id="colNo" text="No" prefWidth="90"/>
                     <TableColumn fx:id="colType" text="Type" prefWidth="110"/>
                     <TableColumn fx:id="colPrice" text="Price" prefWidth="110"/>

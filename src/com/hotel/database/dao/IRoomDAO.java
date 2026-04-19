@@ -11,6 +11,8 @@ public interface IRoomDAO {
     boolean update(Room room);
     boolean delete(int roomId);
     List<Room> findAll();
+    List<Room> findByHotelId(int hotelId);
     Optional<Room> findById(int roomId);
     List<Room> findAvailableRooms(LocalDate checkIn, LocalDate checkOut, String roomType);
+    List<Room> findAvailableRooms(LocalDate checkIn, LocalDate checkOut, String roomType, Integer hotelId);
 }

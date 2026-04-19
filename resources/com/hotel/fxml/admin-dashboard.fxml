@@ -17,7 +17,8 @@
             </ImageView>
             <Text text="Admin Panel" styleClass="nav-brand"/>
             <Region HBox.hgrow="ALWAYS"/>
-            <Button text="Manage Rooms" onAction="#handleManageRooms" styleClass="btn-outline-sm"/>
+            <Button text="Manage Hotels" onAction="#handleManageHotels" styleClass="btn-outline-sm"/>
+            <Button text="Manage Services" onAction="#handleManageServices" styleClass="btn-outline-sm"/>
             <Button text="Reports" onAction="#handleReports" styleClass="btn-outline-sm"/>
             <Button text="Refresh" onAction="#handleRefresh" styleClass="btn-outline-sm"/>
             <Button text="Log Out" onAction="#handleLogout" styleClass="btn-outline-sm"/>

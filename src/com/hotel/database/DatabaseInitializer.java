@@ -4,6 +4,7 @@ import com.hotel.model.Room;
 import com.hotel.model.User;
 import com.hotel.database.dao.RoomDAO;
 import com.hotel.database.dao.UserDAO;
+import com.hotel.service.ExtraServiceCatalogService;
 import org.mindrot.jbcrypt.BCrypt;
 
 import java.sql.Connection;
@@ -19,6 +20,7 @@ public final class DatabaseInitializer {
         if (initialized) return;
         DatabaseConnection db = DatabaseConnection.getInstance();
         db.ensureSchema();
+        new ExtraServiceCatalogService().ensureDefaultServices();
         if (tableIsEmpty(db, "users")) {
             User admin = new User(
                 "System Admin",

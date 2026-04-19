@@ -1,0 +1,22 @@
+# Büyük Dosyalar ve Araçlar (Hata aldığın kısımlar)
+.tools/
+*.tar.gz
+*.zip
+*.jar
+
+# macOS özel dosyaları
+.DS_Store
+
+# Java ve IDE dosyaları
+*.class
+target/
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# Log dosyaları
+*.log
+

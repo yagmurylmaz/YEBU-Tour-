@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.hotel.ui.AdminDashboardController"
+            styleClass="root-pane" prefWidth="1100" prefHeight="700">
+    <top>
+        <HBox styleClass="top-nav" alignment="CENTER_LEFT" spacing="12">
+            <ImageView fitHeight="38.0" preserveRatio="true" pickOnBounds="true" styleClass="nav-logo-img">
+                <image>
+                    <Image url="@../images/logo-yebu.png"/>
+                </image>
+            </ImageView>
+            <Text text="Admin Panel" styleClass="nav-brand"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="Manage Rooms" onAction="#handleManageRooms" styleClass="btn-outline-sm"/>
+            <Button text="Reports" onAction="#handleReports" styleClass="btn-outline-sm"/>
+            <Button text="Refresh" onAction="#handleRefresh" styleClass="btn-outline-sm"/>
+            <Button text="Log Out" onAction="#handleLogout" styleClass="btn-outline-sm"/>
+        </HBox>
+    </top>
+
+    <center>
+        <VBox spacing="18" style="-fx-padding: 20;">
+            <HBox spacing="12">
+                <VBox styleClass="stat-card"><Label text="Total"/><Label fx:id="labelTotalRes" styleClass="stat-value"/></VBox>
+                <VBox styleClass="stat-card"><Label text="Pending"/><Label fx:id="labelPending" styleClass="stat-value"/></VBox>
+                <VBox styleClass="stat-card"><Label text="Approved"/><Label fx:id="labelApproved" styleClass="stat-value"/></VBox>
+                <VBox styleClass="stat-card"><Label text="Cancelled"/><Label fx:id="labelCancelled" styleClass="stat-value"/></VBox>
+                <VBox styleClass="stat-card"><Label text="Total Revenue"/><Label fx:id="labelRevenue" styleClass="stat-value"/></VBox>
+            </HBox>
+
+            <TableView fx:id="reservationTable" VBox.vgrow="ALWAYS">
+                <columns>
+                    <TableColumn fx:id="colId" text="ID" prefWidth="80"/>
+                    <TableColumn fx:id="colCustomer" text="Customer" prefWidth="170"/>
+                    <TableColumn fx:id="colRoom" text="Room" prefWidth="130"/>
+                    <TableColumn fx:id="colCheckIn" text="Check-in" prefWidth="110"/>
+                    <TableColumn fx:id="colCheckOut" text="Check-out" prefWidth="110"/>
+                    <TableColumn fx:id="colTotal" text="Amount" prefWidth="120"/>
+                    <TableColumn fx:id="colStatus" text="Status" prefWidth="130"/>
+                    <TableColumn fx:id="colCreated" text="Created At" prefWidth="140"/>
+                </columns>
+            </TableView>
+
+            <HBox spacing="10" alignment="CENTER_RIGHT">
+                <Button text="Approve" onAction="#handleApprove" styleClass="btn-primary"/>
+                <Button text="Cancel" onAction="#handleCancel" styleClass="btn-outline"/>
+            </HBox>
+        </VBox>
+    </center>
+</BorderPane>

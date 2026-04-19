@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.hotel.ui.AdminReportController"
+            styleClass="root-pane" prefWidth="1000" prefHeight="650">
+    <top>
+        <HBox styleClass="top-nav" alignment="CENTER_LEFT" spacing="12">
+            <ImageView fitHeight="38.0" preserveRatio="true" pickOnBounds="true" styleClass="nav-logo-img">
+                <image>
+                    <Image url="@../images/logo-yebu.png"/>
+                </image>
+            </ImageView>
+            <Text text="Admin Reports" styleClass="nav-brand"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="Refresh" onAction="#handleRefresh" styleClass="btn-outline-sm"/>
+            <Button text="Back" onAction="#handleBack" styleClass="btn-outline-sm"/>
+            <Button text="Log Out" onAction="#handleLogout" styleClass="btn-outline-sm"/>
+        </HBox>
+    </top>
+
+    <center>
+        <VBox spacing="14" style="-fx-padding: 20;">
+            <HBox spacing="10">
+                <VBox styleClass="stat-card"><Label text="Total"/><Label fx:id="labelTotal" styleClass="stat-value"/></VBox>
+                <VBox styleClass="stat-card"><Label text="Pending"/><Label fx:id="labelPending" styleClass="stat-value"/></VBox>
+                <VBox styleClass="stat-card"><Label text="Approved"/><Label fx:id="labelApproved" styleClass="stat-value"/></VBox>
+                <VBox styleClass="stat-card"><Label text="Cancelled"/><Label fx:id="labelCancelled" styleClass="stat-value"/></VBox>
+                <VBox styleClass="stat-card"><Label text="Revenue"/><Label fx:id="labelRevenue" styleClass="stat-value"/></VBox>
+            </HBox>
+            <TextArea fx:id="distributionArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS"/>
+        </VBox>
+    </center>
+</BorderPane>

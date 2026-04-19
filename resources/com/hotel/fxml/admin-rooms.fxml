@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.hotel.ui.AdminRoomController"
+            styleClass="root-pane" prefWidth="1100" prefHeight="700">
+    <top>
+        <HBox styleClass="top-nav" alignment="CENTER_LEFT" spacing="12">
+            <ImageView fitHeight="38.0" preserveRatio="true" pickOnBounds="true" styleClass="nav-logo-img">
+                <image>
+                    <Image url="@../images/logo-yebu.png"/>
+                </image>
+            </ImageView>
+            <Text text="Room Management" styleClass="nav-brand"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="Back" onAction="#handleBack" styleClass="btn-outline-sm"/>
+            <Button text="Log Out" onAction="#handleLogout" styleClass="btn-outline-sm"/>
+        </HBox>
+    </top>
+
+    <center>
+        <HBox spacing="18" style="-fx-padding: 20;">
+            <VBox spacing="10" prefWidth="330" styleClass="card">
+                <Label text="Room Details" styleClass="page-title"/>
+                <Label text="Room No"/>
+                <TextField fx:id="roomNumberField"/>
+                <Label text="Room Type"/>
+                <ComboBox fx:id="roomTypeCombo"/>
+                <Label text="Price per night"/>
+                <TextField fx:id="priceField"/>
+                <Label text="Capacity"/>
+                <TextField fx:id="capacityField"/>
+                <Label text="Description"/>
+                <TextField fx:id="descriptionField"/>
+                <CheckBox fx:id="availableCheck" text="Available"/>
+
+                <HBox spacing="8">
+                    <Button text="Add" onAction="#handleAddRoom" styleClass="btn-primary"/>
+                    <Button text="Update" onAction="#handleUpdateRoom" styleClass="btn-outline"/>
+                    <Button text="Delete" onAction="#handleDeleteRoom" styleClass="btn-outline"/>
+                    <Button text="Clear" onAction="#handleClearForm" styleClass="btn-outline"/>
+                </HBox>
+                <Label fx:id="statusLabel" wrapText="true"/>
+            </VBox>
+
+            <TableView fx:id="roomTable" HBox.hgrow="ALWAYS">
+                <columns>
+                    <TableColumn fx:id="colNo" text="No" prefWidth="90"/>
+                    <TableColumn fx:id="colType" text="Type" prefWidth="110"/>
+                    <TableColumn fx:id="colPrice" text="Price" prefWidth="110"/>
+                    <TableColumn fx:id="colCapacity" text="Capacity" prefWidth="110"/>
+                    <TableColumn fx:id="colDesc" text="Description" prefWidth="250"/>
+                    <TableColumn fx:id="colAvailable" text="Status" prefWidth="120"/>
+                </columns>
+            </TableView>
+        </HBox>
+    </center>
+</BorderPane>

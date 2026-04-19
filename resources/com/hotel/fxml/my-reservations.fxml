@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.hotel.ui.MyReservationsController"
+            styleClass="root-pane" prefWidth="1050" prefHeight="680">
+    <top>
+        <HBox styleClass="top-nav" alignment="CENTER_LEFT" spacing="12">
+            <ImageView fitHeight="38.0" preserveRatio="true" pickOnBounds="true" styleClass="nav-logo-img">
+                <image>
+                    <Image url="@../images/logo-yebu.png"/>
+                </image>
+            </ImageView>
+            <Text text="My Reservations" styleClass="nav-brand"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="Back" onAction="#handleBack" styleClass="btn-outline-sm"/>
+            <Button text="Log Out" onAction="#handleLogout" styleClass="btn-outline-sm"/>
+        </HBox>
+    </top>
+
+    <center>
+        <VBox spacing="14" style="-fx-padding: 20;">
+            <Label fx:id="infoLabel"/>
+            <TableView fx:id="reservationTable" VBox.vgrow="ALWAYS">
+                <columns>
+                    <TableColumn fx:id="colId" text="ID" prefWidth="90"/>
+                    <TableColumn fx:id="colRoom" text="Room" prefWidth="190"/>
+                    <TableColumn fx:id="colCheckIn" text="Check-in" prefWidth="120"/>
+                    <TableColumn fx:id="colCheckOut" text="Check-out" prefWidth="120"/>
+                    <TableColumn fx:id="colNights" text="Nights" prefWidth="110"/>
+                    <TableColumn fx:id="colTotal" text="Amount" prefWidth="130"/>
+                    <TableColumn fx:id="colStatus" text="Status" prefWidth="150"/>
+                </columns>
+            </TableView>
+            <HBox alignment="CENTER_RIGHT">
+                <Button text="Cancel Selected Reservation" onAction="#handleCancelReservation" styleClass="btn-outline"/>
+            </HBox>
+        </VBox>
+    </center>
+</BorderPane>

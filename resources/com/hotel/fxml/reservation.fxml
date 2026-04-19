@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.hotel.ui.ReservationController"
+            styleClass="root-pane" prefWidth="980" prefHeight="650">
+    <top>
+        <HBox styleClass="top-nav" alignment="CENTER_LEFT" spacing="12">
+            <ImageView fitHeight="38.0" preserveRatio="true" pickOnBounds="true" styleClass="nav-logo-img">
+                <image>
+                    <Image url="@../images/logo-yebu.png"/>
+                </image>
+            </ImageView>
+            <Text text="Reservation Confirmation" styleClass="nav-brand"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="Back" onAction="#handleBack" styleClass="btn-outline-sm"/>
+            <Button text="Log Out" onAction="#handleLogout" styleClass="btn-outline-sm"/>
+        </HBox>
+    </top>
+
+    <center>
+        <HBox spacing="18" style="-fx-padding: 20;">
+            <VBox spacing="8" styleClass="card" prefWidth="420">
+                <Label text="Selected Room Information" styleClass="page-title"/>
+                <Label text="Room No:"/><Label fx:id="labelRoomNo"/>
+                <Label text="Room Type:"/><Label fx:id="labelRoomType"/>
+                <Label text="Check-in:"/><Label fx:id="labelCheckIn"/>
+                <Label text="Check-out:"/><Label fx:id="labelCheckOut"/>
+                <Label text="Nights:"/><Label fx:id="labelNights"/>
+                <Label text="Room Price:"/><Label fx:id="labelRoomPrice"/>
+            </VBox>
+
+            <VBox spacing="10" styleClass="card" HBox.hgrow="ALWAYS">
+                <Label text="Extra Services" styleClass="page-title"/>
+                <HBox spacing="10"><CheckBox fx:id="cbBreakfast" text="Breakfast"/><Label fx:id="labelBreakfastPrice"/></HBox>
+                <HBox spacing="10"><CheckBox fx:id="cbGym" text="Gym"/><Label fx:id="labelGymPrice"/></HBox>
+                <HBox spacing="10"><CheckBox fx:id="cbPool" text="Pool"/><Label fx:id="labelPoolPrice"/></HBox>
+                <HBox spacing="10"><CheckBox fx:id="cbParking" text="Parking"/><Label fx:id="labelParkingPrice"/></HBox>
+                <Separator/>
+                <HBox spacing="8" alignment="CENTER_LEFT">
+                    <Label text="Total Amount:" styleClass="page-title"/>
+                    <Label fx:id="labelTotalPrice" styleClass="stat-value"/>
+                </HBox>
+                <Button text="Confirm Reservation" onAction="#handleConfirmReservation" styleClass="btn-primary"/>
+            </VBox>
+        </HBox>
+    </center>
+</BorderPane>

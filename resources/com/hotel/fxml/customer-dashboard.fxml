@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.hotel.ui.CustomerDashboardController"
+            styleClass="root-pane" prefWidth="900" prefHeight="620">
+<top>
+        <HBox styleClass="top-nav" alignment="CENTER_LEFT" spacing="12">
+            <ImageView fitHeight="38.0" preserveRatio="true" pickOnBounds="true" styleClass="nav-logo-img">
+                <image>
+                    <Image url="@../images/logo-yebu.png"/>
+                </image>
+            </ImageView>
+            <Text text="YEBU Tour" styleClass="nav-brand"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label fx:id="welcomeLabel" styleClass="nav-welcome"/>
+            <Button text="Log Out" onAction="#handleLogout" styleClass="btn-outline-sm"/>
+        </HBox>
+    </top>
+<center>
+        <VBox alignment="CENTER" spacing="32" style="-fx-padding: 60;">
+            <Text text="What would you like to do?" styleClass="page-title"/>
+
+            <HBox alignment="CENTER" spacing="24">
+<VBox styleClass="menu-card" alignment="CENTER" spacing="12"
+                      onMouseClicked="#handleSearchRooms">
+                    <Text text="🔍" style="-fx-font-size:42;"/>
+                    <Text text="Search Rooms &amp; Reservation" styleClass="menu-card-title"/>
+                    <Text text="List available rooms by date and room type"
+                          styleClass="menu-card-desc" wrappingWidth="180"/>
+                </VBox>
+<VBox styleClass="menu-card" alignment="CENTER" spacing="12"
+                      onMouseClicked="#handleMyReservations">
+                    <Text text="📋" style="-fx-font-size:42;"/>
+                    <Text text="My Reservations" styleClass="menu-card-title"/>
+                    <Text text="View your current and past reservations"
+                          styleClass="menu-card-desc" wrappingWidth="180"/>
+                </VBox>
+            </HBox>
+        </VBox>
+    </center>
+</BorderPane>

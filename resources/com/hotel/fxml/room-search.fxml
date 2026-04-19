@@ -31,6 +31,10 @@
                 <DatePicker fx:id="checkOutDatePicker"/>
                 <Label text="Room Type"/>
                 <ComboBox fx:id="roomTypeCombo" prefWidth="150"/>
+                <Label text="Country"/>
+                <ComboBox fx:id="countryCombo" prefWidth="150"/>
+                <Label text="City"/>
+                <ComboBox fx:id="cityCombo" prefWidth="150"/>
                 <Label text="Hotel"/>
                 <ComboBox fx:id="hotelCombo" prefWidth="180"/>
                 <Button text="Search" onAction="#handleSearch" styleClass="btn-primary"/>

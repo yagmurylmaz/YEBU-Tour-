@@ -26,7 +26,9 @@ public class RoomSearchController {
     @FXML private DatePicker    checkInDatePicker;
     @FXML private DatePicker    checkOutDatePicker;
     @FXML private ComboBox<String> roomTypeCombo;
-    @FXML private ComboBox<String> hotelCombo;
+    @FXML private ComboBox<String> countryCombo;
+    @FXML private ComboBox<String> cityCombo;
+    @FXML private ComboBox<Hotel> hotelCombo;
     @FXML private TableView<Room>  roomTable;
     @FXML private TableColumn<Room, Room> colPhoto;
     @FXML private TableColumn<Room, String> colRoomNo;
@@ -44,6 +46,7 @@ public class RoomSearchController {
     private final ReservationService reservationService = new ReservationService();
     private final RoomImageService   roomImageService   = new RoomImageService();
     private final Map<Integer, String> coverPathCache = new HashMap<>();
+    private final List<Hotel> allHotels = new java.util.ArrayList<>();
 
     private static Room selectedRoom;
     private static LocalDate selectedCheckIn;
@@ -55,17 +58,7 @@ public class RoomSearchController {
             "ALL", "SINGLE", "DOUBLE", "SUITE", "DELUXE"
         ));
         roomTypeCombo.setValue("ALL");
-        if (hotelCombo != null) {
-            var hotelNames = hotelService.getAllHotels().stream()
-                .map(Hotel::getName)
-                .distinct()
-                .sorted()
-                .toList();
-            var opts = FXCollections.observableArrayList(hotelNames);
-            opts.add(0, "ALL");
-            hotelCombo.setItems(opts);
-            hotelCombo.setValue("ALL");
-        }
+        setupLocationFilters();
         colPhoto.setCellValueFactory(cd -> new ReadOnlyObjectWrapper<>(cd.getValue()));
         colPhoto.setCellFactory(col -> new TableCell<Room, Room>() {
             private final ImageView iv = new ImageView();
@@ -225,12 +218,63 @@ public class RoomSearchController {
 
     private Integer resolveSelectedHotelId() {
         if (hotelCombo == null) return null;
-        String selected = hotelCombo.getValue();
-        if (selected == null || selected.equals("ALL")) return null;
-        return hotelService.getAllHotels().stream()
-            .filter(h -> selected.equals(h.getName()))
-            .map(Hotel::getId)
-            .findFirst()
-            .orElse(null);
+        Hotel selected = hotelCombo.getValue();
+        if (selected == null || selected.getId() <= 0) return null;
+        return selected.getId();
+    }
+
+    private void setupLocationFilters() {
+        allHotels.clear();
+        allHotels.addAll(hotelService.getAllHotels());
+
+        if (countryCombo == null || cityCombo == null || hotelCombo == null) return;
+
+        List<String> countries = allHotels.stream()
+            .map(Hotel::getCountryName)
+            .filter(s -> s != null && !s.isBlank())
+            .distinct()
+            .sorted()
+            .toList();
+        var countryItems = FXCollections.observableArrayList(countries);
+        countryItems.add(0, "ALL");
+        countryCombo.setItems(countryItems);
+        countryCombo.setValue("ALL");
+
+        countryCombo.valueProperty().addListener((obs, old, val) -> refreshCityCombo());
+        cityCombo.valueProperty().addListener((obs, old, val) -> refreshHotelCombo());
+
+        refreshCityCombo();
+    }
+
+    private void refreshCityCombo() {
+        String selectedCountry = countryCombo.getValue();
+        List<String> cities = allHotels.stream()
+            .filter(h -> "ALL".equals(selectedCountry) || h.getCountryName().equals(selectedCountry))
+            .map(Hotel::getCityName)
+            .filter(s -> s != null && !s.isBlank())
+            .distinct()
+            .sorted()
+            .toList();
+        var cityItems = FXCollections.observableArrayList(cities);
+        cityItems.add(0, "ALL");
+        cityCombo.setItems(cityItems);
+        cityCombo.setValue("ALL");
+        refreshHotelCombo();
+    }
+
+    private void refreshHotelCombo() {
+        String selectedCountry = countryCombo.getValue();
+        String selectedCity = cityCombo.getValue();
+        List<Hotel> hotels = allHotels.stream()
+            .filter(h -> "ALL".equals(selectedCountry) || h.getCountryName().equals(selectedCountry))
+            .filter(h -> "ALL".equals(selectedCity) || h.getCityName().equals(selectedCity))
+            .toList();
+        Hotel allOption = new Hotel();
+        allOption.setId(0);
+        allOption.setName("ALL");
+        var hotelItems = FXCollections.observableArrayList(hotels);
+        hotelItems.add(0, allOption);
+        hotelCombo.setItems(hotelItems);
+        hotelCombo.setValue(allOption);
     }
 }

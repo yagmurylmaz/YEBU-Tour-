@@ -46,5 +46,10 @@ public class Hotel {
     public void setCountryName(String countryName) { this.countryName = countryName; }
     public String getCityName() { return cityName == null ? "" : cityName; }
     public void setCityName(String cityName) { this.cityName = cityName; }
+
+    @Override
+    public String toString() {
+        return getName();
+    }
 }
 

@@ -4,6 +4,10 @@ import com.hotel.database.DatabaseConnection;
 import com.hotel.model.Reservation;
 import com.hotel.model.Room;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.Statement;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,67 +18,144 @@ public class RoomDAO implements IRoomDAO {
 
     @Override
     public int save(Room room) {
-        room.setId(db.nextRoomId());
-        db.rooms().add(room);
-        db.persistAll();
-        return room.getId();
+        String sql = """
+            INSERT INTO rooms (room_number, room_type, price_per_night, capacity, description, available)
+            VALUES (?,?,?,?,?,?)
+            """;
+        try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setString(1, room.getRoomNumber());
+            ps.setString(2, room.getRoomType().name());
+            ps.setDouble(3, room.getPricePerNight());
+            ps.setInt(4, room.getCapacity());
+            ps.setString(5, room.getDescription());
+            ps.setInt(6, room.isAvailable() ? 1 : 0);
+            ps.executeUpdate();
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                if (keys.next()) {
+                    room.setId(keys.getInt(1));
+                    return room.getId();
+                }
+            }
+            return -1;
+        } catch (Exception e) {
+            throw new IllegalStateException("save room failed: " + e.getMessage(), e);
+        }
     }
 
     @Override
     public boolean update(Room room) {
-        Optional<Room> existingOpt = findById(room.getId());
-        if (existingOpt.isEmpty()) return false;
-        Room existing = existingOpt.get();
-        existing.setRoomNumber(room.getRoomNumber());
-        existing.setRoomType(room.getRoomType());
-        existing.setPricePerNight(room.getPricePerNight());
-        existing.setCapacity(room.getCapacity());
-        existing.setDescription(room.getDescription());
-        existing.setAvailable(room.isAvailable());
-        db.persistAll();
-        return true;
+        String sql = """
+            UPDATE rooms SET room_number=?, room_type=?, price_per_night=?, capacity=?, description=?, available=?
+            WHERE id=?
+            """;
+        try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, room.getRoomNumber());
+            ps.setString(2, room.getRoomType().name());
+            ps.setDouble(3, room.getPricePerNight());
+            ps.setInt(4, room.getCapacity());
+            ps.setString(5, room.getDescription());
+            ps.setInt(6, room.isAvailable() ? 1 : 0);
+            ps.setInt(7, room.getId());
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            throw new IllegalStateException("update room failed: " + e.getMessage(), e);
+        }
     }
 
     @Override
     public boolean delete(int roomId) {
-        boolean hasActiveReservation = db.reservations().stream()
-            .anyMatch(r -> r.getRoomId() == roomId && r.getStatus() != Reservation.Status.CANCELLED);
-        if (hasActiveReservation) return false;
-        boolean deleted = db.rooms().removeIf(r -> r.getId() == roomId);
-        if (deleted) db.persistAll();
-        return deleted;
+        if (hasActiveReservation(roomId)) return false;
+        String sql = "DELETE FROM rooms WHERE id=?";
+        try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, roomId);
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            throw new IllegalStateException("delete room failed: " + e.getMessage(), e);
+        }
+    }
+
+    private boolean hasActiveReservation(int roomId) {
+        String sql = """
+            SELECT COUNT(*) FROM reservations
+            WHERE room_id=? AND status <> 'CANCELLED'
+            """;
+        try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, roomId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException(e.getMessage(), e);
+        }
     }
 
     @Override
     public List<Room> findAll() {
-        return new ArrayList<>(db.rooms());
+        List<Room> list = new ArrayList<>();
+        String sql = "SELECT id, room_number, room_type, price_per_night, capacity, description, available FROM rooms ORDER BY id";
+        try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) list.add(mapRoom(rs));
+        } catch (Exception e) {
+            throw new IllegalStateException("findAll rooms failed: " + e.getMessage(), e);
+        }
+        return list;
     }
 
     @Override
     public Optional<Room> findById(int roomId) {
-        return db.rooms().stream().filter(r -> r.getId() == roomId).findFirst();
+        String sql = "SELECT id, room_number, room_type, price_per_night, capacity, description, available FROM rooms WHERE id=?";
+        try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, roomId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return Optional.empty();
+                return Optional.of(mapRoom(rs));
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException("findById room failed: " + e.getMessage(), e);
+        }
     }
 
     @Override
     public List<Room> findAvailableRooms(LocalDate checkIn, LocalDate checkOut, String roomType) {
-        List<Room> result = new ArrayList<>();
-        for (Room room : db.rooms()) {
-            if (!room.isAvailable()) continue;
-            if (roomType != null && !"ALL".equalsIgnoreCase(roomType) &&
-                !room.getRoomType().name().equalsIgnoreCase(roomType)) {
-                continue;
+        String typeFilter = roomType == null ? "ALL" : roomType;
+        String sql = """
+            SELECT r.id, r.room_number, r.room_type, r.price_per_night, r.capacity, r.description, r.available
+            FROM rooms r
+            WHERE r.available = 1
+            AND (? = 'ALL' OR r.room_type = ?)
+            AND NOT EXISTS (
+              SELECT 1 FROM reservations res
+              WHERE res.room_id = r.id
+              AND res.status <> 'CANCELLED'
+              AND res.check_in < ?
+              AND res.check_out > ?
+            )
+            ORDER BY r.id
+            """;
+        List<Room> list = new ArrayList<>();
+        try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, typeFilter);
+            ps.setString(2, typeFilter);
+            ps.setObject(3, checkOut);
+            ps.setObject(4, checkIn);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) list.add(mapRoom(rs));
             }
-            boolean conflict = db.reservations().stream().anyMatch(r ->
-                r.getRoomId() == room.getId() &&
-                r.getStatus() != Reservation.Status.CANCELLED &&
-                datesOverlap(checkIn, checkOut, r.getCheckInDate(), r.getCheckOutDate())
-            );
-            if (!conflict) result.add(room);
+        } catch (Exception e) {
+            throw new IllegalStateException("findAvailableRooms failed: " + e.getMessage(), e);
         }
-        return result;
+        return list;
     }
 
-    private boolean datesOverlap(LocalDate startA, LocalDate endA, LocalDate startB, LocalDate endB) {
-        return startA.isBefore(endB) && endA.isAfter(startB);
+    static Room mapRoom(ResultSet rs) throws Exception {
+        Room room = new Room();
+        room.setId(rs.getInt("id"));
+        room.setRoomNumber(rs.getString("room_number"));
+        room.setRoomType(Room.RoomType.valueOf(rs.getString("room_type")));
+        room.setPricePerNight(rs.getDouble("price_per_night"));
+        room.setCapacity(rs.getInt("capacity"));
+        room.setDescription(rs.getString("description"));
+        room.setAvailable(rs.getInt("available") == 1);
+        return room;
     }
 }

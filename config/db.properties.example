@@ -1,0 +1,6 @@
+# Copy this file to config/db.properties and set your MySQL password.
+# Create database: CREATE DATABASE yebu_hotel CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+db.url=jdbc:mysql://127.0.0.1:3306/yebu_hotel
+db.user=root
+db.password=root

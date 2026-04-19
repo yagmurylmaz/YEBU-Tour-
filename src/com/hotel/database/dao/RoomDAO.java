@@ -97,7 +97,7 @@ public class RoomDAO implements IRoomDAO {
         List<Room> list = new ArrayList<>();
         String sql = """
             SELECT r.id, r.room_number, r.room_type, r.price_per_night, r.capacity, r.description, r.available, r.image_path, r.hotel_id,
-                   h.name AS hotel_name
+                   h.name AS hotel_name, h.image_path AS hotel_image_path
             FROM rooms r
             LEFT JOIN hotels h ON r.hotel_id = h.id
             ORDER BY r.id
@@ -114,7 +114,7 @@ public class RoomDAO implements IRoomDAO {
     public List<Room> findByHotelId(int hotelId) {
         String sql = """
             SELECT r.id, r.room_number, r.room_type, r.price_per_night, r.capacity, r.description, r.available, r.image_path, r.hotel_id,
-                   h.name AS hotel_name
+                   h.name AS hotel_name, h.image_path AS hotel_image_path
             FROM rooms r
             LEFT JOIN hotels h ON r.hotel_id = h.id
             WHERE r.hotel_id=?
@@ -136,7 +136,7 @@ public class RoomDAO implements IRoomDAO {
     public Optional<Room> findById(int roomId) {
         String sql = """
             SELECT r.id, r.room_number, r.room_type, r.price_per_night, r.capacity, r.description, r.available, r.image_path, r.hotel_id,
-                   h.name AS hotel_name
+                   h.name AS hotel_name, h.image_path AS hotel_image_path
             FROM rooms r
             LEFT JOIN hotels h ON r.hotel_id = h.id
             WHERE r.id=?
@@ -162,9 +162,9 @@ public class RoomDAO implements IRoomDAO {
         String typeFilter = roomType == null ? "ALL" : roomType;
         String sql = """
             SELECT r.id, r.room_number, r.room_type, r.price_per_night, r.capacity, r.description, r.available, r.image_path, r.hotel_id,
-                   h.name AS hotel_name
+                   h.name AS hotel_name, h.image_path AS hotel_image_path
             FROM rooms r
-            LEFT JOIN hotels h ON r.hotel_id = h.id
+            JOIN hotels h ON r.hotel_id = h.id
             WHERE r.available = 1
             AND (? = 'ALL' OR r.room_type = ?)
             AND (? IS NULL OR r.hotel_id = ?)
@@ -208,8 +208,10 @@ public class RoomDAO implements IRoomDAO {
         room.setHotelId(rs.wasNull() ? null : hotelId);
         try {
             room.setHotelName(rs.getString("hotel_name"));
+            room.setHotelImagePath(rs.getString("hotel_image_path"));
         } catch (Exception ignored) {
             room.setHotelName(null);
+            room.setHotelImagePath(null);
         }
         return room;
     }

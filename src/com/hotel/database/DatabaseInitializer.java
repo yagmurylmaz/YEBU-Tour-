@@ -20,6 +20,7 @@ public final class DatabaseInitializer {
         if (initialized) return;
         DatabaseConnection db = DatabaseConnection.getInstance();
         db.ensureSchema();
+        cleanupOrphanRooms(db);
         new ExtraServiceCatalogService().ensureDefaultServices();
         if (tableIsEmpty(db, "users")) {
             User admin = new User(
@@ -37,6 +38,19 @@ public final class DatabaseInitializer {
             addRoom(roomDAO, "301", Room.RoomType.DELUXE, 4200, 4, "Deluxe family room");
         }
         initialized = true;
+    }
+
+    private static void cleanupOrphanRooms(DatabaseConnection db) {
+        String sql = """
+            DELETE FROM rooms
+            WHERE hotel_id IS NULL
+               OR NOT EXISTS (SELECT 1 FROM hotels h WHERE h.id = rooms.hotel_id)
+            """;
+        try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.executeUpdate();
+        } catch (Exception e) {
+            System.err.println("[DatabaseInitializer] Orphan room cleanup failed: " + e.getMessage());
+        }
     }
 
     private static boolean tableIsEmpty(DatabaseConnection db, String table) {

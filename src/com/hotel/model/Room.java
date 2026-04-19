@@ -13,6 +13,7 @@ public class Room {
     private String imagePath;
     private Integer hotelId;
     private String hotelName;
+    private String hotelImagePath;
     private boolean available = true;
 
     public Room() {}
@@ -43,6 +44,8 @@ public class Room {
     public void setHotelId(Integer hotelId) { this.hotelId = hotelId; }
     public String getHotelName() { return hotelName == null ? "" : hotelName; }
     public void setHotelName(String hotelName) { this.hotelName = hotelName; }
+    public String getHotelImagePath() { return hotelImagePath; }
+    public void setHotelImagePath(String hotelImagePath) { this.hotelImagePath = hotelImagePath; }
     public boolean isAvailable() { return available; }
     public void setAvailable(boolean available) { this.available = available; }
 

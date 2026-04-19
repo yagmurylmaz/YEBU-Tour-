@@ -47,6 +47,7 @@ public class RoomSearchController {
     private final RoomImageService   roomImageService   = new RoomImageService();
     private final Map<Integer, String> coverPathCache = new HashMap<>();
     private final List<Hotel> allHotels = new java.util.ArrayList<>();
+    private final Map<Integer, String> hotelCoverCache = new HashMap<>();
 
     private static Room selectedRoom;
     private static LocalDate selectedCheckIn;
@@ -74,7 +75,7 @@ public class RoomSearchController {
                     setGraphic(null);
                     return;
                 }
-                var img = RoomImageStorage.loadFxImage(resolveCoverImagePath(room));
+                var img = RoomImageStorage.loadFxImage(resolveHotelImagePath(room));
                 iv.setImage(img);
                 setGraphic(img != null ? iv : null);
             }
@@ -102,7 +103,7 @@ public class RoomSearchController {
             if (room == null) {
                 clearSelectedGallery();
             } else {
-                loadSelectedGallery(room.getId(), room.getImagePath());
+                loadSelectedGallery(room);
             }
         });
     }
@@ -124,6 +125,7 @@ public class RoomSearchController {
 
         roomTable.setItems(FXCollections.observableArrayList(rooms));
         coverPathCache.clear();
+        hotelCoverCache.clear();
         clearSelectedGallery();
 
         if (rooms.isEmpty()) {
@@ -173,21 +175,43 @@ public class RoomSearchController {
         }
     }
 
-    private void loadSelectedGallery(int roomId, String fallbackCoverPath) {
+    private void loadSelectedGallery(Room room) {
         if (selectedRoomThumbBar == null || selectedRoomImageView == null) return;
         selectedRoomThumbBar.getChildren().clear();
+        if (room == null) return;
+
+        int roomId = room.getId();
+        String hotelImagePath = resolveHotelImagePath(room);
+        String fallbackCoverPath = resolveCoverImagePath(room);
 
         var images = roomImageService.getImagesForRoom(roomId);
         String first = !images.isEmpty() ? images.get(0).getImagePath() : fallbackCoverPath;
-        selectedRoomImageView.setImage(RoomImageStorage.loadFxImage(first));
+        var firstImg = RoomImageStorage.loadFxImage(first);
+        selectedRoomImageView.setImage(firstImg);
 
+        // Thumbnail bar: always show only hotel photo.
+        if (hotelImagePath != null && !hotelImagePath.isBlank()) {
+            var hotelThumb = RoomImageStorage.loadFxImage(hotelImagePath);
+            if (hotelThumb != null) {
+                ImageView iv = new ImageView(hotelThumb);
+                iv.setFitWidth(72);
+                iv.setFitHeight(54);
+                iv.setPreserveRatio(true);
+                iv.setOnMouseClicked(e -> selectedRoomImageView.setImage(RoomImageStorage.loadFxImage(hotelImagePath)));
+                selectedRoomThumbBar.getChildren().add(iv);
+            }
+        }
+
+        // Room photos are kept in the main "Photos" display (selectedRoomImageView).
         for (var ri : images) {
-            ImageView iv = new ImageView(RoomImageStorage.loadFxImage(ri.getImagePath()));
-            iv.setFitWidth(72);
-            iv.setFitHeight(54);
-            iv.setPreserveRatio(true);
-            iv.setOnMouseClicked(e -> selectedRoomImageView.setImage(RoomImageStorage.loadFxImage(ri.getImagePath())));
-            selectedRoomThumbBar.getChildren().add(iv);
+            if (firstImg == null) {
+                var roomImg = RoomImageStorage.loadFxImage(ri.getImagePath());
+                if (roomImg != null) {
+                    selectedRoomImageView.setImage(roomImg);
+                    firstImg = roomImg;
+                    break;
+                }
+            }
         }
     }
 
@@ -204,6 +228,52 @@ public class RoomSearchController {
         if (first != null && !first.isBlank()) {
             coverPathCache.put(room.getId(), first);
             return first;
+        }
+        String hotelPath = room.getHotelImagePath();
+        if (hotelPath != null && !hotelPath.isBlank()) {
+            coverPathCache.put(room.getId(), hotelPath);
+            return hotelPath;
+        }
+        Integer hid = room.getHotelId();
+        if (hid != null && hid > 0) {
+            String cachedHotelPath = hotelCoverCache.get(hid);
+            if (cachedHotelPath != null && !cachedHotelPath.isBlank()) {
+                coverPathCache.put(room.getId(), cachedHotelPath);
+                return cachedHotelPath;
+            }
+            String lookedUp = hotelService.getAllHotels().stream()
+                .filter(h -> h.getId() == hid)
+                .map(Hotel::getImagePath)
+                .filter(p -> p != null && !p.isBlank())
+                .findFirst()
+                .orElse(null);
+            if (lookedUp != null) {
+                hotelCoverCache.put(hid, lookedUp);
+                coverPathCache.put(room.getId(), lookedUp);
+                return lookedUp;
+            }
+        }
+        return null;
+    }
+
+    private String resolveHotelImagePath(Room room) {
+        if (room == null) return null;
+        String hotelPath = room.getHotelImagePath();
+        if (hotelPath != null && !hotelPath.isBlank()) return hotelPath;
+        Integer hid = room.getHotelId();
+        if (hid != null && hid > 0) {
+            String cachedHotelPath = hotelCoverCache.get(hid);
+            if (cachedHotelPath != null && !cachedHotelPath.isBlank()) return cachedHotelPath;
+            String lookedUp = hotelService.getAllHotels().stream()
+                .filter(h -> h.getId() == hid)
+                .map(Hotel::getImagePath)
+                .filter(p -> p != null && !p.isBlank())
+                .findFirst()
+                .orElse(null);
+            if (lookedUp != null) {
+                hotelCoverCache.put(hid, lookedUp);
+                return lookedUp;
+            }
         }
         return null;
     }

@@ -184,14 +184,24 @@ public final class DatabaseConnection {
         } catch (SQLException e) {
             String msg = e.getMessage() != null ? e.getMessage() : "";
             if (e.getErrorCode() == 1060 || msg.contains("Duplicate column")) {
+                // already exists, continue for FK migration
+            } else {
+                throw e;
+            }
+        }
+        try {
+            st.executeUpdate("ALTER TABLE rooms DROP FOREIGN KEY fk_room_hotel");
+        } catch (SQLException e) {
+            // ignore if FK does not exist
+        }
+        try {
+            st.executeUpdate("ALTER TABLE rooms ADD CONSTRAINT fk_room_hotel FOREIGN KEY (hotel_id) REFERENCES hotels(id) ON DELETE CASCADE");
+        } catch (SQLException e) {
+            String msg = e.getMessage() != null ? e.getMessage() : "";
+            if (msg.contains("Duplicate") || msg.contains("already exists")) {
                 return;
             }
             throw e;
-        }
-        try {
-            st.executeUpdate("ALTER TABLE rooms ADD CONSTRAINT fk_room_hotel FOREIGN KEY (hotel_id) REFERENCES hotels(id) ON DELETE SET NULL");
-        } catch (SQLException e) {
-            // ignore if constraint exists / can't be added
         }
     }
 

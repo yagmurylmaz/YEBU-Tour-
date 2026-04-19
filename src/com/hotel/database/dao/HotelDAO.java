@@ -62,10 +62,28 @@ public class HotelDAO {
     }
 
     public boolean delete(int hotelId) {
-        String sql = "DELETE FROM hotels WHERE id=?";
-        try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
-            ps.setInt(1, hotelId);
-            return ps.executeUpdate() > 0;
+        String deleteRoomsSql = "DELETE FROM rooms WHERE hotel_id=?";
+        String deleteHotelSql = "DELETE FROM hotels WHERE id=?";
+        try (Connection c = db.getConnection();
+             PreparedStatement psRooms = c.prepareStatement(deleteRoomsSql);
+             PreparedStatement psHotel = c.prepareStatement(deleteHotelSql)) {
+            boolean oldAutoCommit = c.getAutoCommit();
+            c.setAutoCommit(false);
+            try {
+                psRooms.setInt(1, hotelId);
+                psRooms.executeUpdate();
+
+                psHotel.setInt(1, hotelId);
+                boolean deleted = psHotel.executeUpdate() > 0;
+
+                c.commit();
+                c.setAutoCommit(oldAutoCommit);
+                return deleted;
+            } catch (Exception inner) {
+                c.rollback();
+                c.setAutoCommit(oldAutoCommit);
+                throw inner;
+            }
         } catch (Exception e) {
             throw new IllegalStateException("delete hotel failed: " + e.getMessage(), e);
         }

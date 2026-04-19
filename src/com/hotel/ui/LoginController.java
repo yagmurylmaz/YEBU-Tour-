@@ -47,6 +47,16 @@ public class LoginController {
         MainApp.navigateTo("register.fxml");
     }
 
+    @FXML
+    private void handleForgotPassword() {
+        MainApp.navigateTo("forgot-password.fxml");
+    }
+
+    @FXML
+    private void handleResetPassword() {
+        MainApp.navigateTo("reset-password.fxml");
+    }
+
     private void showError(String message) {
         errorLabel.setText(message);
         errorLabel.setVisible(true);

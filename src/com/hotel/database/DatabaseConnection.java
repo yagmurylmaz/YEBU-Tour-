@@ -73,6 +73,18 @@ public final class DatabaseConnection {
                   CONSTRAINT fk_res_room FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE RESTRICT
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
                 """);
+            st.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS password_reset_tokens (
+                  id INT AUTO_INCREMENT PRIMARY KEY,
+                  user_id INT NOT NULL,
+                  token_hash CHAR(64) NOT NULL,
+                  expires_at DATETIME NOT NULL,
+                  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  UNIQUE KEY uq_prt_token (token_hash),
+                  UNIQUE KEY uq_prt_user (user_id),
+                  CONSTRAINT fk_prt_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+                """);
             schemaReady = true;
         } catch (SQLException e) {
             throw new IllegalStateException("Failed to create database schema: " + e.getMessage(), e);

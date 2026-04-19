@@ -8,4 +8,5 @@ public interface IUserDAO {
     Optional<User> findByEmail(String email);
     boolean emailExists(String email);
     boolean save(User user);
+    boolean updatePasswordHash(int userId, String passwordHash);
 }

@@ -32,6 +32,18 @@ public class UserDAO implements IUserDAO {
     }
 
     @Override
+    public boolean updatePasswordHash(int userId, String passwordHash) {
+        String sql = "UPDATE users SET password_hash = ? WHERE id = ?";
+        try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, passwordHash);
+            ps.setInt(2, userId);
+            return ps.executeUpdate() == 1;
+        } catch (Exception e) {
+            throw new IllegalStateException("updatePasswordHash failed: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
     public boolean save(User user) {
         if (emailExists(user.getEmail())) return false;
         String sql = "INSERT INTO users (full_name, email, password_hash, phone, role) VALUES (?,?,?,?,?)";

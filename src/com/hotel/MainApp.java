@@ -9,13 +9,16 @@ import javafx.scene.image.Image;
 import javafx.stage.Stage;
 
 import java.io.IOException;
-import java.util.Objects;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 public class MainApp extends Application {
 
     private static final String FXML_BASE = "/com/hotel/fxml/";
     private static final String STYLESHEET = "/com/hotel/css/styles.css";
     private static final String APP_ICON = "/com/hotel/images/logo-yebu.png";
+    private static final int MAX_PARENT_WALK = 12;
 
     private static Stage primaryStage;
 
@@ -38,23 +41,44 @@ public class MainApp extends Application {
 
     public static void navigateTo(String fxmlFile) {
         try {
-            Parent root = FXMLLoader.load(
-                Objects.requireNonNull(
-                    MainApp.class.getResource(FXML_BASE + fxmlFile)
-                )
-            );
+            URL fxmlUrl = resolveResource(FXML_BASE + fxmlFile);
+            if (fxmlUrl == null) {
+                throw new IllegalStateException("FXML not found: " + FXML_BASE + fxmlFile);
+            }
+            Parent root = FXMLLoader.load(fxmlUrl);
             Scene scene = new Scene(root);
-            scene.getStylesheets().add(
-                Objects.requireNonNull(
-                    MainApp.class.getResource(STYLESHEET)
-                ).toExternalForm()
-            );
+            URL cssUrl = resolveResource(STYLESHEET);
+            if (cssUrl != null) {
+                scene.getStylesheets().add(cssUrl.toExternalForm());
+            } else {
+                System.err.println("[MainApp] Stylesheet not found: " + STYLESHEET);
+            }
             primaryStage.setScene(scene);
             primaryStage.centerOnScreen();
-        } catch (IOException e) {
+        } catch (IOException | IllegalStateException e) {
             System.err.println("[MainApp] Screen loading error (" + fxmlFile + "): " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    private static URL resolveResource(String classpathPath) {
+        URL cpUrl = MainApp.class.getResource(classpathPath);
+        if (cpUrl != null) return cpUrl;
+
+        String relative = classpathPath.startsWith("/") ? classpathPath.substring(1) : classpathPath;
+        Path dir = Path.of(System.getProperty("user.dir", ".")).toAbsolutePath().normalize();
+        for (int i = 0; i < MAX_PARENT_WALK && dir != null; i++) {
+            Path candidate = dir.resolve("resources").resolve(relative);
+            if (Files.isRegularFile(candidate)) {
+                try {
+                    return candidate.toUri().toURL();
+                } catch (Exception ignored) {
+                    return null;
+                }
+            }
+            dir = dir.getParent();
+        }
+        return null;
     }
 
     @Override

@@ -165,3 +165,24 @@
     -fx-cursor: hand;
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.12), 6, 0.15, 0, 1);
 }
+
+.review-star-button {
+    -fx-background-color: #f2f4f7;
+    -fx-text-fill: #98a2b3;
+    -fx-font-size: 18;
+    -fx-font-weight: 700;
+    -fx-background-radius: 10;
+    -fx-min-width: 42;
+    -fx-min-height: 38;
+    -fx-cursor: hand;
+}
+
+.review-star-button:hover {
+    -fx-background-color: #ffe7a6;
+    -fx-text-fill: #b54708;
+}
+
+.review-star-button:selected {
+    -fx-background-color: #fdb022;
+    -fx-text-fill: #ffffff;
+}

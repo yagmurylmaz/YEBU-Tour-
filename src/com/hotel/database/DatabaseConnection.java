@@ -159,6 +159,23 @@ public final class DatabaseConnection {
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
                 """);
             st.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS hotel_reviews (
+                  id INT AUTO_INCREMENT PRIMARY KEY,
+                  reservation_id INT NOT NULL,
+                  hotel_id INT NOT NULL,
+                  customer_id INT NOT NULL,
+                  stars INT NOT NULL,
+                  comment VARCHAR(1500) NOT NULL,
+                  created_at VARCHAR(32),
+                  CONSTRAINT fk_hr_reservation FOREIGN KEY (reservation_id) REFERENCES reservations(id) ON DELETE CASCADE,
+                  CONSTRAINT fk_hr_hotel FOREIGN KEY (hotel_id) REFERENCES hotels(id) ON DELETE CASCADE,
+                  CONSTRAINT fk_hr_customer FOREIGN KEY (customer_id) REFERENCES users(id) ON DELETE CASCADE,
+                  UNIQUE KEY uq_hr_reservation (reservation_id),
+                  INDEX idx_hr_hotel (hotel_id),
+                  INDEX idx_hr_customer (customer_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+                """);
+            st.executeUpdate("""
                 CREATE TABLE IF NOT EXISTS password_reset_tokens (
                   id INT AUTO_INCREMENT PRIMARY KEY,
                   user_id INT NOT NULL,

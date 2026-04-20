@@ -65,6 +65,10 @@
                             <HBox fx:id="selectedRoomThumbBar" spacing="8" style="-fx-padding: 6;"/>
                         </content>
                     </ScrollPane>
+                    <Separator/>
+                    <Label text="Hotel Reviews" styleClass="page-title"/>
+                    <Label fx:id="hotelRatingLabel" text="No rating yet"/>
+                    <ListView fx:id="hotelReviewListView" prefHeight="170"/>
                 </VBox>
             </HBox>
 

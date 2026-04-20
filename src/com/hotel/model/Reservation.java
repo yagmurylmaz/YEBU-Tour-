@@ -17,6 +17,8 @@ public class Reservation {
     private String customerName;
     private String roomNumber;
     private String roomType;
+    private Integer hotelId;
+    private String hotelName;
 
     public Reservation() {}
 
@@ -50,6 +52,10 @@ public class Reservation {
     public void setRoomNumber(String roomNumber) { this.roomNumber = roomNumber; }
     public String getRoomType() { return roomType == null ? "-" : roomType; }
     public void setRoomType(String roomType) { this.roomType = roomType; }
+    public Integer getHotelId() { return hotelId; }
+    public void setHotelId(Integer hotelId) { this.hotelId = hotelId; }
+    public String getHotelName() { return hotelName == null ? "-" : hotelName; }
+    public void setHotelName(String hotelName) { this.hotelName = hotelName; }
 
     public int getNightCount() {
         if (checkInDate == null || checkOutDate == null) return 0;

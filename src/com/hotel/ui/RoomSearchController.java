@@ -2,7 +2,9 @@ package com.hotel.ui;
 
 import com.hotel.MainApp;
 import com.hotel.model.Hotel;
+import com.hotel.model.HotelReview;
 import com.hotel.model.Room;
+import com.hotel.service.HotelReviewService;
 import com.hotel.service.HotelService;
 import com.hotel.service.ReservationService;
 import com.hotel.service.RoomImageService;
@@ -40,9 +42,12 @@ public class RoomSearchController {
     @FXML private Label statusLabel;
     @FXML private ImageView selectedRoomImageView;
     @FXML private HBox selectedRoomThumbBar;
+    @FXML private Label hotelRatingLabel;
+    @FXML private ListView<String> hotelReviewListView;
 
     private final RoomService        roomService        = new RoomService();
     private final HotelService       hotelService       = new HotelService();
+    private final HotelReviewService hotelReviewService = new HotelReviewService();
     private final ReservationService reservationService = new ReservationService();
     private final RoomImageService   roomImageService   = new RoomImageService();
     private final Map<Integer, String> coverPathCache = new HashMap<>();
@@ -102,8 +107,10 @@ public class RoomSearchController {
         roomTable.getSelectionModel().selectedItemProperty().addListener((obs, old, room) -> {
             if (room == null) {
                 clearSelectedGallery();
+                clearHotelReviews();
             } else {
                 loadSelectedGallery(room);
+                loadHotelReviews(room);
             }
         });
     }
@@ -127,6 +134,7 @@ public class RoomSearchController {
         coverPathCache.clear();
         hotelCoverCache.clear();
         clearSelectedGallery();
+        clearHotelReviews();
 
         if (rooms.isEmpty()) {
             statusLabel.setText("No available rooms for the selected date range.");
@@ -284,6 +292,33 @@ public class RoomSearchController {
         alert.setHeaderText(null);
         alert.setContentText(content);
         alert.showAndWait();
+    }
+
+    private void clearHotelReviews() {
+        if (hotelRatingLabel != null) hotelRatingLabel.setText("No rating yet");
+        if (hotelReviewListView != null) hotelReviewListView.getItems().clear();
+    }
+
+    private void loadHotelReviews(Room room) {
+        if (room == null || room.getHotelId() == null || room.getHotelId() <= 0) {
+            clearHotelReviews();
+            return;
+        }
+        List<HotelReview> reviews = hotelReviewService.getReviewsForHotel(room.getHotelId());
+        double avg = hotelReviewService.getAverageStarsForHotel(room.getHotelId());
+        if (hotelRatingLabel != null) {
+            if (reviews.isEmpty()) {
+                hotelRatingLabel.setText("No rating yet");
+            } else {
+                hotelRatingLabel.setText(String.format("Average: %.1f / 5 (%d review)", avg, reviews.size()));
+            }
+        }
+        if (hotelReviewListView != null) {
+            var rows = reviews.stream()
+                .map(r -> "★".repeat(Math.max(1, r.getStars())) + " - " + r.getCustomerName() + ": " + r.getComment())
+                .toList();
+            hotelReviewListView.setItems(FXCollections.observableArrayList(rows));
+        }
     }
 
     private Integer resolveSelectedHotelId() {

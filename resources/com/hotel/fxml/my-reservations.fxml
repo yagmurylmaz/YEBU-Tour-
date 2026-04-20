@@ -23,22 +23,41 @@
     </top>
 
     <center>
-        <VBox spacing="14" style="-fx-padding: 20;">
-            <Label fx:id="infoLabel"/>
-            <TableView fx:id="reservationTable" VBox.vgrow="ALWAYS">
-                <columns>
-                    <TableColumn fx:id="colId" text="ID" prefWidth="90"/>
-                    <TableColumn fx:id="colRoom" text="Room" prefWidth="190"/>
-                    <TableColumn fx:id="colCheckIn" text="Check-in" prefWidth="120"/>
-                    <TableColumn fx:id="colCheckOut" text="Check-out" prefWidth="120"/>
-                    <TableColumn fx:id="colNights" text="Nights" prefWidth="110"/>
-                    <TableColumn fx:id="colTotal" text="Amount" prefWidth="130"/>
-                    <TableColumn fx:id="colStatus" text="Status" prefWidth="150"/>
-                </columns>
-            </TableView>
-            <HBox alignment="CENTER_RIGHT">
-                <Button text="Cancel Selected Reservation" onAction="#handleCancelReservation" styleClass="btn-outline"/>
-            </HBox>
-        </VBox>
+        <HBox spacing="16" style="-fx-padding: 20;">
+            <VBox spacing="14" HBox.hgrow="ALWAYS">
+                <Label fx:id="infoLabel"/>
+                <TableView fx:id="reservationTable" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="colId" text="ID" prefWidth="90"/>
+                        <TableColumn fx:id="colRoom" text="Room" prefWidth="190"/>
+                        <TableColumn fx:id="colCheckIn" text="Check-in" prefWidth="120"/>
+                        <TableColumn fx:id="colCheckOut" text="Check-out" prefWidth="120"/>
+                        <TableColumn fx:id="colNights" text="Nights" prefWidth="110"/>
+                        <TableColumn fx:id="colTotal" text="Amount" prefWidth="130"/>
+                        <TableColumn fx:id="colStatus" text="Status" prefWidth="150"/>
+                    </columns>
+                </TableView>
+                <HBox alignment="CENTER_RIGHT">
+                    <Button text="Cancel Selected Reservation" onAction="#handleCancelReservation" styleClass="btn-outline"/>
+                </HBox>
+            </VBox>
+
+            <VBox spacing="10" prefWidth="330" styleClass="card">
+                <Label text="Rate Your Stay" styleClass="page-title"/>
+                <Label fx:id="selectedReservationLabel" styleClass="text-muted" text="Select a reservation to review"/>
+                <Label fx:id="reviewEligibilityLabel" styleClass="text-muted" wrapText="true"/>
+                <Label text="Your Rating"/>
+                <HBox spacing="6">
+                    <ToggleButton fx:id="star1Button" text="★" styleClass="review-star-button"/>
+                    <ToggleButton fx:id="star2Button" text="★" styleClass="review-star-button"/>
+                    <ToggleButton fx:id="star3Button" text="★" styleClass="review-star-button"/>
+                    <ToggleButton fx:id="star4Button" text="★" styleClass="review-star-button"/>
+                    <ToggleButton fx:id="star5Button" text="★" styleClass="review-star-button"/>
+                </HBox>
+                <Label text="Your Comment"/>
+                <TextArea fx:id="reviewCommentArea" promptText="Share your hotel experience..." wrapText="true" prefRowCount="7"/>
+                <Button text="Submit Review" onAction="#handleAddReview" styleClass="btn-primary"/>
+            </VBox>
+        </HBox>
     </center>
 </BorderPane>

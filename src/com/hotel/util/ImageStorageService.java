@@ -1,23 +1,28 @@
 package com.hotel.util;
 
-import com.hotel.database.dao.MediaAssetDAO;
 import javafx.scene.image.Image;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 public final class ImageStorageService {
-    private static final String SHARED_MEDIA_ROOT = "shared-media";
-    private static final MediaAssetDAO MEDIA_ASSET_DAO = new MediaAssetDAO();
     private static final int IMAGE_CACHE_MAX = 400;
+    private static final Duration MISS_CACHE_TTL = Duration.ofSeconds(45);
+    private static final int MAX_PARENT_WALK = 12;
     private static final Map<String, Image> IMAGE_CACHE = createImageCache();
-    private static final Map<String, Boolean> MISS_CACHE = createMissCache();
+    private static final Map<String, Instant> MISS_CACHE = createMissCache();
+    private static final HttpClient HTTP = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(12)).build();
 
     private ImageStorageService() {}
 
@@ -25,154 +30,182 @@ public final class ImageStorageService {
         if (sourceFile == null || !sourceFile.isFile()) {
             throw new IllegalArgumentException("Select a valid image file.");
         }
-        String ext = extensionOf(sourceFile.getName());
-        String fileName = prefix + "-" + entityId + "-" + System.nanoTime() + ext;
-
-        // Prefer relative shared path in DB so it works across machines.
-        String pathKey = SHARED_MEDIA_ROOT + "/" + folderName + "/" + fileName;
-        persistMediaAsset(pathKey, sourceFile.toPath());
-        return pathKey;
+        return uploadToCloudinary(folderName, prefix, entityId, sourceFile.toPath());
     }
 
     public static Path getStorageDir(String folderName) {
-        Path dir = Path.of(System.getProperty("user.home"), ".hotel-app", folderName);
-        try {
-            Files.createDirectories(dir);
-        } catch (IOException e) {
-            throw new IllegalStateException("Cannot create image directory: " + dir, e);
-        }
-        return dir;
+        return Path.of(System.getProperty("user.home"), ".hotel-app", folderName);
     }
 
     public static Path getSharedStorageDir(String folderName) {
-        Path dir = Path.of(System.getProperty("user.dir", ".")).toAbsolutePath().normalize()
-            .resolve(SHARED_MEDIA_ROOT)
-            .resolve(folderName);
-        try {
-            Files.createDirectories(dir);
-        } catch (IOException e) {
-            throw new IllegalStateException("Cannot create shared image directory: " + dir, e);
-        }
-        return dir;
+        return Path.of(System.getProperty("user.dir", ".")).toAbsolutePath().normalize().resolve(folderName);
     }
 
     public static void deleteFileIfExists(String absolutePath) {
-        if (absolutePath == null || absolutePath.isBlank()) return;
-        String src = absolutePath.trim();
-        if (isRemotePath(src)) return;
-        try {
-            Path normalized = normalizeLocalPath(src);
-            String filename = normalized.getFileName() != null ? normalized.getFileName().toString() : null;
-            String key = resolvePathKey(src, filename);
-            if (key != null) {
-                MEDIA_ASSET_DAO.deleteByPathKey(key);
-                clearCache(src);
-                clearCache(key);
-            }
-        } catch (Exception ignored) {
-        }
+        clearCache(absolutePath);
     }
 
     public static Image loadFxImage(String absolutePath) {
         if (absolutePath == null || absolutePath.isBlank()) return null;
+        String src = absolutePath.trim();
+        Image cached = getCached(src);
+        if (cached != null) return cached;
+        if (isKnownMiss(src)) return null;
         try {
-            String src = absolutePath.trim();
-            Image cached = getCached(src);
-            if (cached != null) return cached;
-            if (isKnownMiss(src)) return null;
+            Image img;
             if (isRemotePath(src)) {
-                Image remote = new Image(src, true);
-                if (remote.isError()) {
+                img = new Image(src, true);
+            } else {
+                Path local = normalizeLocalPath(src);
+                if (!Files.isRegularFile(local)) {
                     rememberMiss(src);
                     return null;
                 }
-                putCache(src, remote);
-                return remote;
+                img = new Image(local.toUri().toString(), true);
             }
-
-            Path local = normalizeLocalPath(src);
-            String filename = local.getFileName() != null ? local.getFileName().toString() : null;
-            String key = resolvePathKey(src, filename);
-            if (key != null) {
-                Image keyCached = getCached(key);
-                if (keyCached != null) {
-                    putCache(src, keyCached);
-                    return keyCached;
-                }
+            if (img.isError()) {
+                rememberMiss(src);
+                return null;
             }
-            Image fromAsset = loadImageFromAsset(key, filename);
-            if (fromAsset != null) {
-                putCache(src, fromAsset);
-                if (key != null) putCache(key, fromAsset);
-                return fromAsset;
-            }
-
-            // Legacy compatibility only: if DB blob is missing but path exists locally.
-            Path existingPath = resolveExistingLocalPath(src);
-            if (existingPath != null) {
-                Image img = new Image(existingPath.toUri().toString(), true);
-                if (img.isError()) {
-                    rememberMiss(src);
-                    return null;
-                }
-                putCache(src, img);
-                return img;
-            }
-            rememberMiss(src);
-            return null;
+            putCache(src, img);
+            return img;
         } catch (Exception e) {
-            rememberMiss(absolutePath);
+            rememberMiss(src);
             return null;
         }
     }
 
     public static String migrateStoredPath(String folderName, String prefix, int entityId, String currentPath) {
         if (currentPath == null || currentPath.isBlank()) return currentPath;
-        String src = currentPath.trim().replace('\\', '/');
+        String src = currentPath.trim();
         if (isRemotePath(src)) return src;
-
-        String sharedPrefix = SHARED_MEDIA_ROOT + "/" + folderName + "/";
-        if (src.startsWith(sharedPrefix)) return src;
-
-        String marker = "/" + SHARED_MEDIA_ROOT + "/" + folderName + "/";
-        int markerIndex = src.indexOf(marker);
-        if (markerIndex >= 0) {
-            String filePart = src.substring(markerIndex + marker.length());
-            return sharedPrefix + filePart;
-        }
-
         try {
-            Path existing = resolveExistingLocalPath(src);
-            if (existing == null) {
-                Path normalized = normalizeLocalPath(src);
-                String filename = normalized.getFileName() != null ? normalized.getFileName().toString() : null;
-                existing = resolveFallbackByFilename(filename);
-            }
-            if (existing == null || !Files.isRegularFile(existing)) return currentPath;
-
-            String ext = extensionOf(existing.getFileName().toString());
-            String fileName = prefix + "-" + entityId + "-migrated-" + System.nanoTime() + ext;
-            String pathKey = sharedPrefix + fileName;
-            persistMediaAsset(pathKey, existing);
-            return pathKey;
+            Path local = normalizeLocalPath(src);
+            if (!Files.isRegularFile(local)) return currentPath;
+            return uploadToCloudinary(folderName, prefix, entityId, local);
         } catch (Exception e) {
             return currentPath;
         }
     }
 
-    private static Path resolveFallbackByFilename(String filename) {
-        if (filename == null || filename.isBlank()) return null;
-        Path[] bases = new Path[] {
-            getStorageDir("room-images"),
-            getStorageDir("hotel-images"),
-            getSharedStorageDir("room-images"),
-            getSharedStorageDir("hotel-images")
-        };
-        for (Path base : bases) {
-            Path candidate = base.resolve(filename);
+    private static String uploadToCloudinary(String folderName, String prefix, int entityId, Path source) throws IOException {
+        String cloudName = firstNonBlank(
+            System.getenv("YEBU_CLOUDINARY_CLOUD_NAME"),
+            System.getenv("CLOUDINARY_CLOUD_NAME"),
+            readConfig("image.cloudinary.cloud_name")
+        );
+        String uploadPreset = firstNonBlank(
+            System.getenv("YEBU_CLOUDINARY_UPLOAD_PRESET"),
+            System.getenv("CLOUDINARY_UPLOAD_PRESET"),
+            readConfig("image.cloudinary.upload_preset")
+        );
+        if (cloudName == null || uploadPreset == null) {
+            throw new IOException(
+                "Cloud image upload is not configured. Set env vars "
+                    + "(YEBU_CLOUDINARY_CLOUD_NAME + YEBU_CLOUDINARY_UPLOAD_PRESET) "
+                    + "or fill config/db.properties "
+                    + "(image.cloudinary.cloud_name + image.cloudinary.upload_preset)."
+            );
+        }
+
+        String endpoint = "https://api.cloudinary.com/v1_1/" + cloudName + "/image/upload";
+        String boundary = "----HotelBoundary" + System.nanoTime();
+        String publicId = folderName + "/" + prefix + "-" + entityId + "-" + System.nanoTime();
+        String mime = guessMimeType(source.getFileName() == null ? null : source.getFileName().toString());
+        byte[] fileBytes = Files.readAllBytes(source);
+        byte[] body = buildMultipartBody(boundary, uploadPreset, folderName, publicId, source.getFileName().toString(), mime, fileBytes);
+
+        HttpRequest req = HttpRequest.newBuilder(URI.create(endpoint))
+            .timeout(Duration.ofSeconds(45))
+            .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+            .POST(HttpRequest.BodyPublishers.ofByteArray(body))
+            .build();
+        try {
+            HttpResponse<String> res = HTTP.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            if (res.statusCode() < 200 || res.statusCode() >= 300) {
+                throw new IOException("Cloud upload failed (HTTP " + res.statusCode() + ").");
+            }
+            String secureUrl = extractJsonString(res.body(), "secure_url");
+            if (secureUrl == null || secureUrl.isBlank()) {
+                throw new IOException("Cloud upload response missing secure_url.");
+            }
+            clearCache(secureUrl);
+            return secureUrl;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Cloud upload interrupted.", e);
+        }
+    }
+
+    private static byte[] buildMultipartBody(String boundary, String uploadPreset, String folder, String publicId,
+                                             String fileName, String mimeType, byte[] fileBytes) {
+        String pre = "--" + boundary + "\r\n"
+            + "Content-Disposition: form-data; name=\"upload_preset\"\r\n\r\n" + uploadPreset + "\r\n"
+            + "--" + boundary + "\r\n"
+            + "Content-Disposition: form-data; name=\"folder\"\r\n\r\n" + folder + "\r\n"
+            + "--" + boundary + "\r\n"
+            + "Content-Disposition: form-data; name=\"public_id\"\r\n\r\n" + publicId + "\r\n"
+            + "--" + boundary + "\r\n"
+            + "Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"\r\n"
+            + "Content-Type: " + mimeType + "\r\n\r\n";
+        String post = "\r\n--" + boundary + "--\r\n";
+        byte[] preBytes = pre.getBytes(StandardCharsets.UTF_8);
+        byte[] postBytes = post.getBytes(StandardCharsets.UTF_8);
+        byte[] merged = new byte[preBytes.length + fileBytes.length + postBytes.length];
+        System.arraycopy(preBytes, 0, merged, 0, preBytes.length);
+        System.arraycopy(fileBytes, 0, merged, preBytes.length, fileBytes.length);
+        System.arraycopy(postBytes, 0, merged, preBytes.length + fileBytes.length, postBytes.length);
+        return merged;
+    }
+
+    private static String readConfig(String key) {
+        try {
+            Path config = findProjectConfig();
+            if (!Files.isRegularFile(config)) return null;
+            java.util.Properties p = new java.util.Properties();
+            try (var in = Files.newInputStream(config)) {
+                p.load(in);
+            }
+            String v = p.getProperty(key);
+            return (v == null || v.isBlank()) ? null : v.trim();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static Path findProjectConfig() {
+        Path dir = Path.of(System.getProperty("user.dir", ".")).toAbsolutePath().normalize();
+        for (int i = 0; i < MAX_PARENT_WALK; i++) {
+            Path candidate = dir.resolve("config").resolve("db.properties");
             if (Files.isRegularFile(candidate)) return candidate;
+            Path parent = dir.getParent();
+            if (parent == null) break;
+            dir = parent;
+        }
+        return Path.of(System.getProperty("user.dir", ".")).toAbsolutePath().normalize().resolve("config").resolve("db.properties");
+    }
+
+    private static String firstNonBlank(String... values) {
+        if (values == null || values.length == 0) return null;
+        for (String v : values) {
+            if (v != null && !v.isBlank()) return v.trim();
         }
         return null;
+    }
+
+    private static String extractJsonString(String json, String key) {
+        if (json == null || json.isBlank()) return null;
+        String token = "\"" + key + "\":";
+        int idx = json.indexOf(token);
+        if (idx < 0) return null;
+        int firstQuote = json.indexOf('"', idx + token.length());
+        if (firstQuote < 0) return null;
+        int secondQuote = json.indexOf('"', firstQuote + 1);
+        while (secondQuote > 0 && json.charAt(secondQuote - 1) == '\\') {
+            secondQuote = json.indexOf('"', secondQuote + 1);
+        }
+        if (secondQuote < 0) return null;
+        return json.substring(firstQuote + 1, secondQuote).replace("\\/", "/");
     }
 
     private static boolean isRemotePath(String path) {
@@ -188,54 +221,6 @@ public final class ImageStorageService {
         return Path.of(p);
     }
 
-    private static Path resolveExistingLocalPath(String src) {
-        Path direct = normalizeLocalPath(src);
-        if (Files.isRegularFile(direct)) return direct;
-
-        // If value is relative, try under project directory explicitly.
-        if (!direct.isAbsolute()) {
-            Path projectRelative = Path.of(System.getProperty("user.dir", ".")).toAbsolutePath().normalize().resolve(src);
-            if (Files.isRegularFile(projectRelative)) return projectRelative;
-        }
-        return null;
-    }
-
-    private static void persistMediaAsset(String pathKey, Path source) {
-        try {
-            byte[] data = Files.readAllBytes(source);
-            String mime = guessMimeType(source.getFileName() != null ? source.getFileName().toString() : null);
-            MEDIA_ASSET_DAO.upsert(pathKey, mime, data);
-        } catch (Exception ignored) {
-            // Do not fail upload because blob persistence failed.
-        }
-    }
-
-    private static String resolvePathKey(String src, String filename) {
-        String normalized = src.replace('\\', '/');
-        if (normalized.startsWith(SHARED_MEDIA_ROOT + "/")) return normalized;
-        String marker = "/" + SHARED_MEDIA_ROOT + "/";
-        int idx = normalized.indexOf(marker);
-        if (idx >= 0) return normalized.substring(idx + 1);
-        var byName = MEDIA_ASSET_DAO.findLatestByFilename(filename);
-        return byName.map(MediaAssetDAO.MediaAsset::pathKey).orElse(null);
-    }
-
-    private static Image loadImageFromAsset(String pathKey, String filename) {
-        if ((pathKey == null || pathKey.isBlank()) && (filename == null || filename.isBlank())) return null;
-        var assetOpt = pathKey != null && !pathKey.isBlank()
-            ? MEDIA_ASSET_DAO.findByPathKey(pathKey)
-            : java.util.Optional.<MediaAssetDAO.MediaAsset>empty();
-        if (assetOpt.isEmpty() && filename != null) assetOpt = MEDIA_ASSET_DAO.findLatestByFilename(filename);
-        if (assetOpt.isEmpty()) return null;
-        try {
-            var asset = assetOpt.get();
-            Image img = new Image(new ByteArrayInputStream(asset.data()));
-            return img.isError() ? null : img;
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
     private static String guessMimeType(String filename) {
         if (filename == null) return "application/octet-stream";
         String f = filename.toLowerCase();
@@ -244,14 +229,6 @@ public final class ImageStorageService {
         if (f.endsWith(".webp")) return "image/webp";
         if (f.endsWith(".bmp")) return "image/bmp";
         return "image/jpeg";
-    }
-
-    private static String extensionOf(String filename) {
-        int dot = filename.lastIndexOf('.');
-        if (dot < 0 || dot == filename.length() - 1) return ".jpg";
-        String ext = filename.substring(dot).toLowerCase();
-        if (!ext.matches("\\.(jpg|jpeg|png|gif|bmp|webp)")) return ".jpg";
-        return ext;
     }
 
     private static Map<String, Image> createImageCache() {
@@ -263,10 +240,10 @@ public final class ImageStorageService {
         });
     }
 
-    private static Map<String, Boolean> createMissCache() {
+    private static Map<String, Instant> createMissCache() {
         return java.util.Collections.synchronizedMap(new LinkedHashMap<>(IMAGE_CACHE_MAX, 0.75f, true) {
             @Override
-            protected boolean removeEldestEntry(Map.Entry<String, Boolean> eldest) {
+            protected boolean removeEldestEntry(Map.Entry<String, Instant> eldest) {
                 return size() > IMAGE_CACHE_MAX;
             }
         });
@@ -285,12 +262,16 @@ public final class ImageStorageService {
 
     private static boolean isKnownMiss(String key) {
         if (key == null || key.isBlank()) return false;
-        return MISS_CACHE.containsKey(key);
+        Instant at = MISS_CACHE.get(key);
+        if (at == null) return false;
+        if (Instant.now().isBefore(at.plus(MISS_CACHE_TTL))) return true;
+        MISS_CACHE.remove(key);
+        return false;
     }
 
     private static void rememberMiss(String key) {
         if (key == null || key.isBlank()) return;
-        MISS_CACHE.put(key, Boolean.TRUE);
+        MISS_CACHE.put(key, Instant.now());
     }
 
     private static void clearCache(String key) {

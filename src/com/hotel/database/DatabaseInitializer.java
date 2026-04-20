@@ -43,7 +43,8 @@ public final class DatabaseInitializer {
     }
 
     private static void runImageMigrationOnce(DatabaseConnection db) {
-        if (isMetaTrue(db, "image_migration_v2_done")) return;
+        boolean migrationDone = isMetaTrue(db, "image_migration_v2_done");
+        if (migrationDone && !hasLegacyImagePaths(db)) return;
         migrateImagePathsToSharedMedia(db);
         setMetaValue(db, "image_migration_v2_done", "true");
     }
@@ -132,6 +133,29 @@ public final class DatabaseInitializer {
             ps.executeUpdate();
         } catch (Exception e) {
             System.err.println("[DatabaseInitializer] app_meta update failed: " + e.getMessage());
+        }
+    }
+
+    private static boolean hasLegacyImagePaths(DatabaseConnection db) {
+        return tableHasLegacyPaths(db, "hotels", "image_path")
+            || tableHasLegacyPaths(db, "rooms", "image_path")
+            || tableHasLegacyPaths(db, "room_images", "image_path");
+    }
+
+    private static boolean tableHasLegacyPaths(DatabaseConnection db, String table, String col) {
+        String sql = """
+            SELECT COUNT(*)
+            FROM %s
+            WHERE %s IS NOT NULL
+              AND %s <> ''
+              AND %s NOT LIKE 'shared-media/%%'
+              AND LOWER(%s) NOT LIKE 'http://%%'
+              AND LOWER(%s) NOT LIKE 'https://%%'
+            """.formatted(table, col, col, col, col, col);
+        try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
+            return rs.next() && rs.getLong(1) > 0;
+        } catch (Exception e) {
+            return false;
         }
     }
 }

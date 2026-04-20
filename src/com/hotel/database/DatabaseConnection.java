@@ -176,14 +176,6 @@ public final class DatabaseConnection {
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
                 """);
             st.executeUpdate("""
-                CREATE TABLE IF NOT EXISTS media_assets (
-                  path_key VARCHAR(512) PRIMARY KEY,
-                  mime_type VARCHAR(128) NOT NULL,
-                  data LONGBLOB NOT NULL,
-                  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-                """);
-            st.executeUpdate("""
                 CREATE TABLE IF NOT EXISTS app_meta (
                   meta_key VARCHAR(128) PRIMARY KEY,
                   meta_value VARCHAR(512) NULL,

@@ -69,20 +69,43 @@ public class RoomDAO implements IRoomDAO {
 
     @Override
     public boolean delete(int roomId) {
-        if (hasActiveReservation(roomId)) return false;
-        String sql = "DELETE FROM rooms WHERE id=?";
-        try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
-            ps.setInt(1, roomId);
-            return ps.executeUpdate() > 0;
+        if (hasBlockingReservation(roomId)) return false;
+        String deleteHistorySql = """
+            DELETE FROM reservations
+            WHERE room_id = ?
+              AND (status = 'CANCELLED' OR check_out <= CURRENT_DATE)
+            """;
+        String deleteRoomSql = "DELETE FROM rooms WHERE id=?";
+        try (Connection c = db.getConnection();
+             PreparedStatement psDeleteHistory = c.prepareStatement(deleteHistorySql);
+             PreparedStatement psDeleteRoom = c.prepareStatement(deleteRoomSql)) {
+            boolean oldAutoCommit = c.getAutoCommit();
+            c.setAutoCommit(false);
+            try {
+                psDeleteHistory.setInt(1, roomId);
+                psDeleteHistory.executeUpdate();
+
+                psDeleteRoom.setInt(1, roomId);
+                boolean deleted = psDeleteRoom.executeUpdate() > 0;
+                c.commit();
+                c.setAutoCommit(oldAutoCommit);
+                return deleted;
+            } catch (Exception inner) {
+                c.rollback();
+                c.setAutoCommit(oldAutoCommit);
+                throw inner;
+            }
         } catch (Exception e) {
             throw new IllegalStateException("delete room failed: " + e.getMessage(), e);
         }
     }
 
-    private boolean hasActiveReservation(int roomId) {
+    private boolean hasBlockingReservation(int roomId) {
         String sql = """
             SELECT COUNT(*) FROM reservations
-            WHERE room_id=? AND status <> 'CANCELLED'
+            WHERE room_id = ?
+              AND status <> 'CANCELLED'
+              AND check_out > CURRENT_DATE
             """;
         try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setInt(1, roomId);

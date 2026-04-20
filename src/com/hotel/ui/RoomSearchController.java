@@ -57,6 +57,7 @@ public class RoomSearchController {
     private static Room selectedRoom;
     private static LocalDate selectedCheckIn;
     private static LocalDate selectedCheckOut;
+    private static Integer preferredHotelId;
 
     @FXML
     private void initialize() {
@@ -141,6 +142,7 @@ public class RoomSearchController {
         } else {
             statusLabel.setText(rooms.size() + " available rooms listed. "
                 + "Select a room to proceed with reservation.");
+            roomTable.getSelectionModel().selectFirst();
         }
     }
 
@@ -173,6 +175,7 @@ public class RoomSearchController {
     public static Room getSelectedRoom()         { return selectedRoom; }
     public static LocalDate getSelectedCheckIn() { return selectedCheckIn; }
     public static LocalDate getSelectedCheckOut(){ return selectedCheckOut; }
+    public static void setPreferredHotelId(Integer hotelId) { preferredHotelId = hotelId; }
 
     private void clearSelectedGallery() {
         if (selectedRoomImageView != null) {
@@ -349,6 +352,7 @@ public class RoomSearchController {
         cityCombo.valueProperty().addListener((obs, old, val) -> refreshHotelCombo());
 
         refreshCityCombo();
+        applyPreferredHotelSelection();
     }
 
     private void refreshCityCombo() {
@@ -381,5 +385,40 @@ public class RoomSearchController {
         hotelItems.add(0, allOption);
         hotelCombo.setItems(hotelItems);
         hotelCombo.setValue(allOption);
+    }
+
+    private void applyPreferredHotelSelection() {
+        if (preferredHotelId == null || preferredHotelId <= 0 || hotelCombo == null) return;
+        Hotel preferred = allHotels.stream()
+            .filter(h -> h.getId() == preferredHotelId)
+            .findFirst()
+            .orElse(null);
+        if (preferred == null) {
+            preferredHotelId = null;
+            return;
+        }
+
+        if (countryCombo != null) {
+            String country = preferred.getCountryName();
+            if (country != null && !country.isBlank()) {
+                countryCombo.setValue(country);
+            }
+        }
+        if (cityCombo != null) {
+            String city = preferred.getCityName();
+            if (city != null && !city.isBlank()) {
+                cityCombo.setValue(city);
+            }
+        }
+
+        refreshHotelCombo();
+        for (Hotel h : hotelCombo.getItems()) {
+            if (h != null && h.getId() == preferredHotelId) {
+                hotelCombo.setValue(h);
+                break;
+            }
+        }
+        handleSearch();
+        preferredHotelId = null;
     }
 }

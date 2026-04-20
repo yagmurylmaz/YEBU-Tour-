@@ -32,7 +32,9 @@
                 <Label text="Password" styleClass="field-label"/>
                 <PasswordField fx:id="passwordField" promptText="Enter your password"
                                styleClass="text-field"/>
-                <HBox alignment="CENTER_RIGHT">
+                <HBox alignment="CENTER_LEFT">
+                    <CheckBox fx:id="rememberMeCheckBox" text="Remember me"/>
+                    <Region HBox.hgrow="ALWAYS"/>
                     <Hyperlink text="Forgot password?" onAction="#handleForgotPassword"
                                styleClass="link"/>
                 </HBox>

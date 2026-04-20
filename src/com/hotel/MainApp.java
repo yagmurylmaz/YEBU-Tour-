@@ -73,9 +73,6 @@ public class MainApp extends Application {
     }
 
     private static URL resolveResource(String classpathPath) {
-        URL cpUrl = MainApp.class.getResource(classpathPath);
-        if (cpUrl != null) return cpUrl;
-
         String relative = classpathPath.startsWith("/") ? classpathPath.substring(1) : classpathPath;
         Path dir = Path.of(System.getProperty("user.dir", ".")).toAbsolutePath().normalize();
         for (int i = 0; i < MAX_PARENT_WALK && dir != null; i++) {
@@ -89,6 +86,8 @@ public class MainApp extends Application {
             }
             dir = dir.getParent();
         }
+        URL cpUrl = MainApp.class.getResource(classpathPath);
+        if (cpUrl != null) return cpUrl;
         return null;
     }
 

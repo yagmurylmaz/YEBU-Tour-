@@ -44,6 +44,11 @@ public class AuthService {
         return Optional.empty();
     }
 
+    public Optional<User> findByEmailForRememberMe(String email) {
+        if (email == null || email.isBlank()) return Optional.empty();
+        return userDAO.findByEmail(email.trim().toLowerCase());
+    }
+
     public String register(String fullName, String email, String password, String phone) {
         if (fullName == null || fullName.isBlank())
             return "Full name cannot be empty.";

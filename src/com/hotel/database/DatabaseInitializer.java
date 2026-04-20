@@ -21,7 +21,8 @@ public final class DatabaseInitializer {
         if (initialized) return;
         DatabaseConnection db = DatabaseConnection.getInstance();
         db.ensureSchema();
-        cleanupOrphanRooms(db);
+        cleanupOrphanRooms(db); 
+
         runImageMigrationOnce(db);
         new ExtraServiceCatalogService().ensureDefaultServices();
         if (tableIsEmpty(db, "users")) {

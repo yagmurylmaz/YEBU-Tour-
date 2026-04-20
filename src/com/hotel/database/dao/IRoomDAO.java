@@ -5,6 +5,7 @@ import com.hotel.model.Room;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface IRoomDAO {
     int save(Room room);
@@ -15,4 +16,7 @@ public interface IRoomDAO {
     Optional<Room> findById(int roomId);
     List<Room> findAvailableRooms(LocalDate checkIn, LocalDate checkOut, String roomType);
     List<Room> findAvailableRooms(LocalDate checkIn, LocalDate checkOut, String roomType, Integer hotelId);
+    void replaceAvailabilityRange(int roomId, LocalDate startDate, LocalDate endDate);
+    Set<LocalDate> getAvailableDates(int roomId);
+    boolean isAvailableForRange(int roomId, LocalDate checkIn, LocalDate checkOut);
 }

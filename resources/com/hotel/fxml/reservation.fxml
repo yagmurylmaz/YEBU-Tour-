@@ -43,6 +43,11 @@
                 </VBox>
                 <Label text="Room No:"/><Label fx:id="labelRoomNo"/>
                 <Label text="Room Type:"/><Label fx:id="labelRoomType"/>
+                <Label text="Select dates from calendar"/>
+                <HBox spacing="8">
+                    <DatePicker fx:id="checkInPicker" prefWidth="160"/>
+                    <DatePicker fx:id="checkOutPicker" prefWidth="160"/>
+                </HBox>
                 <Label text="Check-in:"/><Label fx:id="labelCheckIn"/>
                 <Label text="Check-out:"/><Label fx:id="labelCheckOut"/>
                 <Label text="Nights:"/><Label fx:id="labelNights"/>

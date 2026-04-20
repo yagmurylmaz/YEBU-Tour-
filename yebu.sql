@@ -275,6 +275,8 @@ CREATE TABLE `rooms` (
   `available` tinyint(1) NOT NULL DEFAULT '1',
   `image_path` varchar(1024) DEFAULT NULL,
   `hotel_id` int DEFAULT NULL,
+  `available_from` date DEFAULT NULL,
+  `available_to` date DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `fk_room_hotel` (`hotel_id`),
   CONSTRAINT `fk_room_hotel` FOREIGN KEY (`hotel_id`) REFERENCES `hotels` (`id`) ON DELETE CASCADE
@@ -287,7 +289,7 @@ CREATE TABLE `rooms` (
 
 LOCK TABLES `rooms` WRITE;
 /*!40000 ALTER TABLE `rooms` DISABLE KEYS */;
-INSERT INTO `rooms` VALUES (2,'102','DOUBLE',2100.00,2,'Comfort double room',1,NULL,NULL),(3,'201','SUITE',3400.00,3,'Sea view suite',1,NULL,NULL),(4,'301','DELUXE',4200.00,4,'Deluxe family room',1,NULL,NULL),(6,'192','SINGLE',1999.00,2,'deneme',1,'/Users/efeinan/.hotel-app/room-images/room-6.jpeg',NULL),(7,'1232141','SINGLE',123.00,4123,'124',1,'/Users/efeinan/.hotel-app/room-images/room-7-13596401515958.jpeg',NULL),(8,'akdsfnads','SINGLE',12333.00,124213,'asdasd',1,'/Users/efeinan/.hotel-app/room-images/room-8-16046779709291.jpg',NULL),(9,'102','DELUXE',3000.00,2,'medium',1,'/Users/efeinan/.hotel-app/room-images/room-9-18828279183416.jpeg',NULL),(10,'12321','DOUBLE',2.00,3,'3',1,'/Users/efeinan/.hotel-app/room-images/room-10-19594343083875.webp',NULL),(11,'101','DOUBLE',3000.00,2,'standart room',1,'/Users/efeinan/.hotel-app/room-images/room-11-20281217000166.png',6),(12,'201','DOUBLE',3210.00,2,'canakkale bea',1,'/Users/efeinan/.hotel-app/room-images/room-12-20396635657541.png',7);
+INSERT INTO `rooms` VALUES (2,'102','DOUBLE',2100.00,2,'Comfort double room',1,NULL,NULL,'2026-01-01','2026-12-31'),(3,'201','SUITE',3400.00,3,'Sea view suite',1,NULL,NULL,'2026-01-01','2026-12-31'),(4,'301','DELUXE',4200.00,4,'Deluxe family room',1,NULL,NULL,'2026-01-01','2026-12-31'),(6,'192','SINGLE',1999.00,2,'deneme',1,'/Users/efeinan/.hotel-app/room-images/room-6.jpeg',NULL,'2026-01-01','2026-12-31'),(7,'1232141','SINGLE',123.00,4123,'124',1,'/Users/efeinan/.hotel-app/room-images/room-7-13596401515958.jpeg',NULL,'2026-01-01','2026-12-31'),(8,'akdsfnads','SINGLE',12333.00,124213,'asdasd',1,'/Users/efeinan/.hotel-app/room-images/room-8-16046779709291.jpg',NULL,'2026-01-01','2026-12-31'),(9,'102','DELUXE',3000.00,2,'medium',1,'/Users/efeinan/.hotel-app/room-images/room-9-18828279183416.jpeg',NULL,'2026-01-01','2026-12-31'),(10,'12321','DOUBLE',2.00,3,'3',1,'/Users/efeinan/.hotel-app/room-images/room-10-19594343083875.webp',NULL,'2026-01-01','2026-12-31'),(11,'101','DOUBLE',3000.00,2,'standart room',1,'/Users/efeinan/.hotel-app/room-images/room-11-20281217000166.png',6,'2026-01-01','2026-12-31'),(12,'201','DOUBLE',3210.00,2,'canakkale bea',1,'/Users/efeinan/.hotel-app/room-images/room-12-20396635657541.png',7,'2026-01-01','2026-12-31');
 /*!40000 ALTER TABLE `rooms` ENABLE KEYS */;
 UNLOCK TABLES;
 

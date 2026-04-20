@@ -20,9 +20,11 @@ import javafx.stage.Window;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public class AdminRoomController {
     private static Integer scopedHotelId;
@@ -33,6 +35,8 @@ public class AdminRoomController {
     @FXML private TextField        priceField;
     @FXML private TextField        capacityField;
     @FXML private TextField        descriptionField;
+    @FXML private DatePicker       availabilityStartPicker;
+    @FXML private DatePicker       availabilityEndPicker;
     @FXML private ImageView        roomImagePreview;
     @FXML private HBox             photoThumbBar;
     @FXML private CheckBox         availableCheck;
@@ -68,6 +72,8 @@ public class AdminRoomController {
             "SINGLE", "DOUBLE", "SUITE", "DELUXE"
         ));
         availableCheck.setSelected(true);
+        availabilityStartPicker.setValue(LocalDate.now());
+        availabilityEndPicker.setValue(LocalDate.now().plusMonths(6));
         if (selectedHotelLabel != null) {
             selectedHotelLabel.setText("Selected hotel: " + (scopedHotelName == null ? "#" + scopedHotelId : scopedHotelName));
         }
@@ -146,6 +152,7 @@ public class AdminRoomController {
             room.setHotelId(scopedHotelId);
             int newId = roomService.addRoom(room);
             if (newId > 0) {
+                applyAvailabilityForRoom(newId);
                 boolean imagesOk = true;
                 for (File f : pendingImageFiles) {
                     try {
@@ -178,6 +185,7 @@ public class AdminRoomController {
             room.setHotelId(scopedHotelId);
 
             if (roomService.updateRoom(room)) {
+                applyAvailabilityForRoom(selectedRoom.getId());
                 for (File f : pendingImageFiles) {
                     try {
                         String path = RoomImageStorage.copyToRoomFile(selectedRoom.getId(), f);
@@ -241,6 +249,7 @@ public class AdminRoomController {
         capacityField.setText(String.valueOf(room.getCapacity()));
         descriptionField.setText(room.getDescription());
         availableCheck.setSelected(room.isAvailable());
+        fillAvailabilityRange(room.getId());
         loadImagesForSelectedRoom();
     }
 
@@ -269,6 +278,8 @@ public class AdminRoomController {
         priceField.clear();
         capacityField.clear();
         descriptionField.clear();
+        availabilityStartPicker.setValue(LocalDate.now());
+        availabilityEndPicker.setValue(LocalDate.now().plusMonths(6));
         roomImagePreview.setImage(null);
         if (photoThumbBar != null) photoThumbBar.getChildren().clear();
         availableCheck.setSelected(true);
@@ -329,5 +340,24 @@ public class AdminRoomController {
 
     private void showWarn(String msg) {
         new Alert(Alert.AlertType.WARNING, msg).showAndWait();
+    }
+
+    private void applyAvailabilityForRoom(int roomId) {
+        LocalDate start = availabilityStartPicker.getValue();
+        LocalDate end = availabilityEndPicker.getValue();
+        roomService.setRoomAvailabilityRange(roomId, start, end);
+    }
+
+    private void fillAvailabilityRange(int roomId) {
+        Set<LocalDate> dates = roomService.getRoomAvailableDates(roomId);
+        if (dates.isEmpty()) {
+            availabilityStartPicker.setValue(LocalDate.now());
+            availabilityEndPicker.setValue(LocalDate.now().plusMonths(6));
+            return;
+        }
+        LocalDate min = dates.stream().min(LocalDate::compareTo).orElse(LocalDate.now());
+        LocalDate max = dates.stream().max(LocalDate::compareTo).orElse(min);
+        availabilityStartPicker.setValue(min);
+        availabilityEndPicker.setValue(max.plusDays(1));
     }
 }

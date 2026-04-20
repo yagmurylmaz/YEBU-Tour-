@@ -39,6 +39,10 @@
                         <TextField fx:id="capacityField"/>
                         <Label text="Description"/>
                         <TextField fx:id="descriptionField"/>
+                        <Label text="Available from"/>
+                        <DatePicker fx:id="availabilityStartPicker"/>
+                        <Label text="Available until"/>
+                        <DatePicker fx:id="availabilityEndPicker"/>
                         <Label text="Room photo"/>
                         <StackPane styleClass="card" maxHeight="240" minHeight="180" prefHeight="220">
                             <ImageView fx:id="roomImagePreview" fitWidth="220" fitHeight="160" preserveRatio="true" pickOnBounds="true"/>

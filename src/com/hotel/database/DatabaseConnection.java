@@ -110,6 +110,16 @@ public final class DatabaseConnection {
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
                 """);
             st.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS room_availability (
+                  id INT AUTO_INCREMENT PRIMARY KEY,
+                  room_id INT NOT NULL,
+                  available_date DATE NOT NULL,
+                  CONSTRAINT fk_ra_room FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
+                  UNIQUE KEY uq_ra_room_date (room_id, available_date),
+                  INDEX idx_ra_room_date (room_id, available_date)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+                """);
+            st.executeUpdate("""
                 CREATE TABLE IF NOT EXISTS reservations (
                   id INT AUTO_INCREMENT PRIMARY KEY,
                   customer_id INT NOT NULL,

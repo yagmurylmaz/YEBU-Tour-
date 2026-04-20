@@ -314,7 +314,7 @@ public class RoomSearchController {
             }
         }
         if (hotelReviewListView != null) {
-            var rows = reviews.stream()
+            List<String> rows = reviews.stream()
                 .map(r -> "★".repeat(Math.max(1, r.getStars())) + " - " + r.getCustomerName() + ": " + r.getComment())
                 .toList();
             hotelReviewListView.setItems(FXCollections.observableArrayList(rows));

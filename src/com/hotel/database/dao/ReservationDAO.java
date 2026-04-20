@@ -113,13 +113,10 @@ public class ReservationDAO implements IReservationDAO {
             SELECT r.id, r.customer_id, r.room_id, r.check_in, r.check_out, r.total_price, r.status, r.created_at,
                    u.full_name AS customer_name,
                    rm.room_number AS room_number,
-                   rm.room_type AS room_type_enum,
-                   rm.hotel_id AS hotel_id,
-                   h.name AS hotel_name
+                   rm.room_type AS room_type_enum
             FROM reservations r
             JOIN users u ON r.customer_id = u.id
             JOIN rooms rm ON r.room_id = rm.id
-            LEFT JOIN hotels h ON rm.hotel_id = h.id
             """ + suffix;
         List<Reservation> list = new ArrayList<>();
         try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
@@ -150,9 +147,6 @@ public class ReservationDAO implements IReservationDAO {
         r.setCreatedAt(rs.getString("created_at"));
         r.setCustomerName(rs.getString("customer_name"));
         r.setRoomNumber(rs.getString("room_number"));
-        int hotelId = rs.getInt("hotel_id");
-        r.setHotelId(rs.wasNull() ? null : hotelId);
-        r.setHotelName(rs.getString("hotel_name"));
         String rte = rs.getString("room_type_enum");
         if (rte != null) {
             try {

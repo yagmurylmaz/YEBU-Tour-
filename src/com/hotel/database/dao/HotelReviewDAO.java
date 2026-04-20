@@ -34,7 +34,7 @@ public class HotelReviewDAO {
             }
             return -1;
         } catch (Exception e) {
-            throw new IllegalStateException("add review failed: " + e.getMessage(), e);
+            throw new IllegalStateException("add hotel review failed: " + e.getMessage(), e);
         }
     }
 
@@ -53,10 +53,9 @@ public class HotelReviewDAO {
     public List<HotelReview> findByHotelId(int hotelId) {
         String sql = """
             SELECT hr.id, hr.reservation_id, hr.hotel_id, hr.customer_id, hr.stars, hr.comment, hr.created_at,
-                   u.full_name AS customer_name, h.name AS hotel_name
+                   u.full_name AS customer_name
             FROM hotel_reviews hr
             JOIN users u ON hr.customer_id = u.id
-            JOIN hotels h ON hr.hotel_id = h.id
             WHERE hr.hotel_id = ?
             ORDER BY hr.id DESC
             """;
@@ -67,7 +66,7 @@ public class HotelReviewDAO {
                 while (rs.next()) list.add(map(rs));
             }
         } catch (Exception e) {
-            throw new IllegalStateException("find reviews failed: " + e.getMessage(), e);
+            throw new IllegalStateException("find hotel reviews failed: " + e.getMessage(), e);
         }
         return list;
     }
@@ -78,8 +77,8 @@ public class HotelReviewDAO {
             ps.setInt(1, hotelId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) return rs.getDouble(1);
+                return 0.0;
             }
-            return 0.0;
         } catch (Exception e) {
             throw new IllegalStateException("average stars failed: " + e.getMessage(), e);
         }
@@ -95,7 +94,6 @@ public class HotelReviewDAO {
         r.setComment(rs.getString("comment"));
         r.setCreatedAt(rs.getString("created_at"));
         r.setCustomerName(rs.getString("customer_name"));
-        r.setHotelName(rs.getString("hotel_name"));
         return r;
     }
 }

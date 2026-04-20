@@ -41,7 +41,7 @@ public class MyReservationsController {
     @FXML
     private void initialize() {
         setupTableColumns();
-        setupReviewForm();
+        setupReviewPanel();
         loadReservations();
         reservationTable.getSelectionModel().selectedItemProperty().addListener((obs, old, selected) -> refreshReviewPanel(selected));
         refreshReviewPanel(null);
@@ -121,16 +121,11 @@ public class MyReservationsController {
     private void handleAddReview() {
         Reservation selected = reservationTable.getSelectionModel().getSelectedItem();
         if (selected == null) {
-            showAlert(Alert.AlertType.WARNING, "No Selection", "Please select a completed reservation.");
+            showAlert(Alert.AlertType.WARNING, "No Selection", "Please select a reservation to review.");
             return;
         }
-        int customerId = SessionManager.getInstance().getLoggedInUser().getId();
         if (!selected.getCheckOutDate().isBefore(LocalDate.now())) {
-            showAlert(Alert.AlertType.WARNING, "Too Early", "Review can be added after check-out date.");
-            return;
-        }
-        if (selected.getStatus() == Reservation.Status.CANCELLED) {
-            showAlert(Alert.AlertType.WARNING, "Invalid", "Cancelled reservation cannot be reviewed.");
+            showAlert(Alert.AlertType.WARNING, "Too Early", "You can add a review after check-out date.");
             return;
         }
         if (hotelReviewService.hasReviewForReservation(selected.getId())) {
@@ -139,17 +134,18 @@ public class MyReservationsController {
         }
         Toggle selectedStar = starsGroup.getSelectedToggle();
         if (selectedStar == null) {
-            showAlert(Alert.AlertType.WARNING, "Missing Rating", "Please select a star rating.");
+            showAlert(Alert.AlertType.WARNING, "Missing Rating", "Please choose a star rating.");
             return;
         }
         int stars = (int) selectedStar.getUserData();
-        String comment = reviewCommentArea != null ? reviewCommentArea.getText() : "";
+        String comment = reviewCommentArea == null ? "" : reviewCommentArea.getText();
 
+        int customerId = SessionManager.getInstance().getLoggedInUser().getId();
         try {
             int reviewId = hotelReviewService.addReview(selected, customerId, stars, comment);
             if (reviewId > 0) {
-                showAlert(Alert.AlertType.INFORMATION, "Thanks!", "Your review has been saved.");
-                resetReviewInputs();
+                showAlert(Alert.AlertType.INFORMATION, "Success", "Thanks, your review has been saved.");
+                clearReviewInputs();
                 refreshReviewPanel(selected);
             } else {
                 showAlert(Alert.AlertType.ERROR, "Error", "Review could not be saved.");
@@ -161,12 +157,10 @@ public class MyReservationsController {
         }
     }
 
-    private void setupReviewForm() {
-        List<ToggleButton> starButtons = Arrays.asList(
-            star1Button, star2Button, star3Button, star4Button, star5Button
-        );
-        for (int i = 0; i < starButtons.size(); i++) {
-            ToggleButton button = starButtons.get(i);
+    private void setupReviewPanel() {
+        List<ToggleButton> stars = Arrays.asList(star1Button, star2Button, star3Button, star4Button, star5Button);
+        for (int i = 0; i < stars.size(); i++) {
+            ToggleButton button = stars.get(i);
             if (button == null) continue;
             button.setToggleGroup(starsGroup);
             button.setUserData(i + 1);
@@ -175,41 +169,39 @@ public class MyReservationsController {
 
     private void refreshReviewPanel(Reservation reservation) {
         if (selectedReservationLabel == null || reviewEligibilityLabel == null || reviewCommentArea == null) return;
-        resetReviewInputs();
+        clearReviewInputs();
         if (reservation == null) {
             selectedReservationLabel.setText("Select a reservation to review");
-            reviewEligibilityLabel.setText("You can review after check-out date.");
-            reviewCommentArea.setDisable(true);
-            setStarsDisabled(true);
+            reviewEligibilityLabel.setText("You can review your stay after check-out date.");
+            setReviewInputsDisabled(true);
             return;
         }
-        selectedReservationLabel.setText("Hotel: " + reservation.getHotelName() + " | Reservation #" + reservation.getId());
-
-        boolean afterStay = reservation.getCheckOutDate().isBefore(LocalDate.now());
-        boolean isCancelled = reservation.getStatus() == Reservation.Status.CANCELLED;
+        selectedReservationLabel.setText("Reservation #" + reservation.getId() + " | Room " + reservation.getRoomNumber());
+        boolean afterCheckOut = reservation.getCheckOutDate().isBefore(LocalDate.now());
+        boolean cancelled = reservation.getStatus() == Reservation.Status.CANCELLED;
         boolean alreadyReviewed = hotelReviewService.hasReviewForReservation(reservation.getId());
-        boolean canReview = afterStay && !isCancelled && !alreadyReviewed;
+        boolean canReview = afterCheckOut && !cancelled && !alreadyReviewed;
 
-        if (!afterStay) {
-            reviewEligibilityLabel.setText("Review becomes available after " + reservation.getCheckOutDate() + ".");
-        } else if (isCancelled) {
+        if (!afterCheckOut) {
+            reviewEligibilityLabel.setText("Review will open after " + reservation.getCheckOutDate() + ".");
+        } else if (cancelled) {
             reviewEligibilityLabel.setText("Cancelled reservations cannot be reviewed.");
         } else if (alreadyReviewed) {
             reviewEligibilityLabel.setText("You already reviewed this reservation.");
         } else {
-            reviewEligibilityLabel.setText("Tell other users about your experience.");
+            reviewEligibilityLabel.setText("Tell us about your hotel experience.");
         }
-        reviewCommentArea.setDisable(!canReview);
-        setStarsDisabled(!canReview);
+        setReviewInputsDisabled(!canReview);
     }
 
-    private void setStarsDisabled(boolean disabled) {
-        for (Toggle toggle : starsGroup.getToggles()) {
-            if (toggle instanceof ToggleButton button) button.setDisable(disabled);
+    private void setReviewInputsDisabled(boolean disabled) {
+        if (reviewCommentArea != null) reviewCommentArea.setDisable(disabled);
+        for (Toggle t : starsGroup.getToggles()) {
+            if (t instanceof ToggleButton tb) tb.setDisable(disabled);
         }
     }
 
-    private void resetReviewInputs() {
+    private void clearReviewInputs() {
         starsGroup.selectToggle(null);
         if (reviewCommentArea != null) reviewCommentArea.clear();
     }

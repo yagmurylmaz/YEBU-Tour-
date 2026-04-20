@@ -9,7 +9,6 @@ public class HotelReview {
     private String comment;
     private String createdAt;
     private String customerName;
-    private String hotelName;
 
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
@@ -27,6 +26,4 @@ public class HotelReview {
     public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
     public String getCustomerName() { return customerName == null ? "-" : customerName; }
     public void setCustomerName(String customerName) { this.customerName = customerName; }
-    public String getHotelName() { return hotelName == null ? "-" : hotelName; }
-    public void setHotelName(String hotelName) { this.hotelName = hotelName; }
 }

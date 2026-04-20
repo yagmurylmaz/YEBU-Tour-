@@ -42,11 +42,11 @@
                 </HBox>
             </VBox>
 
-            <VBox spacing="10" prefWidth="330" styleClass="card">
+            <VBox spacing="10" prefWidth="340" styleClass="card">
                 <Label text="Rate Your Stay" styleClass="page-title"/>
                 <Label fx:id="selectedReservationLabel" styleClass="text-muted" text="Select a reservation to review"/>
                 <Label fx:id="reviewEligibilityLabel" styleClass="text-muted" wrapText="true"/>
-                <Label text="Your Rating"/>
+                <Label text="Star Rating"/>
                 <HBox spacing="6">
                     <ToggleButton fx:id="star1Button" text="★" styleClass="review-star-button"/>
                     <ToggleButton fx:id="star2Button" text="★" styleClass="review-star-button"/>
@@ -54,8 +54,8 @@
                     <ToggleButton fx:id="star4Button" text="★" styleClass="review-star-button"/>
                     <ToggleButton fx:id="star5Button" text="★" styleClass="review-star-button"/>
                 </HBox>
-                <Label text="Your Comment"/>
-                <TextArea fx:id="reviewCommentArea" promptText="Share your hotel experience..." wrapText="true" prefRowCount="7"/>
+                <Label text="Comment"/>
+                <TextArea fx:id="reviewCommentArea" promptText="Share your experience..." wrapText="true" prefRowCount="7"/>
                 <Button text="Submit Review" onAction="#handleAddReview" styleClass="btn-primary"/>
             </VBox>
         </HBox>

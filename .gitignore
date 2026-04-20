@@ -1,4 +1,5 @@
 # Büyük Dosyalar ve Araçlar (Hata aldığın kısımlar)
+shared-media
 .tools/
 *.tar.gz
 *.zip

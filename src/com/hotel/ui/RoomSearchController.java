@@ -249,7 +249,7 @@ public class RoomSearchController {
                 coverPathCache.put(room.getId(), cachedHotelPath);
                 return cachedHotelPath;
             }
-            String lookedUp = hotelService.getAllHotels().stream()
+            String lookedUp = allHotels.stream()
                 .filter(h -> h.getId() == hid)
                 .map(Hotel::getImagePath)
                 .filter(p -> p != null && !p.isBlank())
@@ -272,7 +272,7 @@ public class RoomSearchController {
         if (hid != null && hid > 0) {
             String cachedHotelPath = hotelCoverCache.get(hid);
             if (cachedHotelPath != null && !cachedHotelPath.isBlank()) return cachedHotelPath;
-            String lookedUp = hotelService.getAllHotels().stream()
+            String lookedUp = allHotels.stream()
                 .filter(h -> h.getId() == hid)
                 .map(Hotel::getImagePath)
                 .filter(p -> p != null && !p.isBlank())

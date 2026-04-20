@@ -23,7 +23,7 @@
     </top>
 
     <center>
-        <HBox spacing="16" style="-fx-padding: 20;">
+        <HBox styleClass="page-container split-layout">
             <VBox spacing="14" HBox.hgrow="ALWAYS">
                 <Label fx:id="infoLabel"/>
                 <TableView fx:id="reservationTable" VBox.vgrow="ALWAYS">
@@ -37,13 +37,13 @@
                         <TableColumn fx:id="colStatus" text="Status" prefWidth="150"/>
                     </columns>
                 </TableView>
-                <HBox alignment="CENTER_RIGHT">
+                <HBox styleClass="action-row">
                     <Button text="Cancel Selected Reservation" onAction="#handleCancelReservation" styleClass="btn-outline"/>
                 </HBox>
             </VBox>
 
-            <VBox spacing="10" prefWidth="340" styleClass="card">
-                <Label text="Rate Your Stay" styleClass="page-title"/>
+            <VBox spacing="10" prefWidth="340" styleClass="section-card">
+                <Label text="Rate Your Stay" styleClass="section-title"/>
                 <Label fx:id="selectedReservationLabel" styleClass="text-muted" text="Select a reservation to review"/>
                 <Label fx:id="reviewEligibilityLabel" styleClass="text-muted" wrapText="true"/>
                 <Label text="Star Rating"/>

@@ -31,7 +31,7 @@ public class LoginController {
         if (userOpt.isPresent()) {
             User user = userOpt.get();
             SessionManager.getInstance().setLoggedInUser(user);
-            if ("ADMIN".equals(user.getRole())) {
+            if (SessionManager.isAdminRole(user.getRole())) {
                 MainApp.navigateTo("admin-dashboard.fxml");
             } else {
                 MainApp.navigateTo("customer-dashboard.fxml");

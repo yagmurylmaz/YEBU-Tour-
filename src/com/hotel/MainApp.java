@@ -5,6 +5,7 @@ import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
 
@@ -55,9 +56,19 @@ public class MainApp extends Application {
             }
             primaryStage.setScene(scene);
             primaryStage.centerOnScreen();
-        } catch (IOException | IllegalStateException e) {
+        } catch (Exception e) {
             System.err.println("[MainApp] Screen loading error (" + fxmlFile + "): " + e.getMessage());
             e.printStackTrace();
+            try {
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setTitle("Navigation Error");
+                alert.setHeaderText("Screen could not be opened");
+                alert.setContentText("Failed to open " + fxmlFile + ".\n" +
+                    (e.getMessage() != null ? e.getMessage() : "Unknown error"));
+                alert.showAndWait();
+            } catch (Exception ignored) {
+                // Last resort: avoid throwing from error handler.
+            }
         }
     }
 

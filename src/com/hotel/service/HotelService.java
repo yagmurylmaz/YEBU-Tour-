@@ -23,8 +23,11 @@ import java.util.regex.Pattern;
 
 public class HotelService {
     private static final Duration COUNTRY_CACHE_TTL = Duration.ofHours(12);
+    private static final Duration HOTEL_CACHE_TTL = Duration.ofMinutes(2);
     private static volatile List<String> countryCache = List.of();
     private static volatile Instant countryCacheAt = Instant.EPOCH;
+    private static volatile List<Hotel> hotelCache = List.of();
+    private static volatile Instant hotelCacheAt = Instant.EPOCH;
 
     private final CountryDAO countryDAO = new CountryDAO();
     private final CityDAO cityDAO = new CityDAO();
@@ -71,7 +74,13 @@ public class HotelService {
     }
 
     public List<Hotel> getAllHotels() {
-        return hotelDAO.findAll();
+        if (!hotelCache.isEmpty() && Instant.now().isBefore(hotelCacheAt.plus(HOTEL_CACHE_TTL))) {
+            return hotelCache;
+        }
+        List<Hotel> fresh = hotelDAO.findAll();
+        hotelCache = fresh;
+        hotelCacheAt = Instant.now();
+        return fresh;
     }
 
     public int addHotel(Hotel hotel, String countryName, String cityName) {
@@ -80,7 +89,9 @@ public class HotelService {
         hotel.setCountryId(countryId);
         hotel.setCityId(cityId);
         validateHotel(hotel);
-        return hotelDAO.add(hotel);
+        int id = hotelDAO.add(hotel);
+        invalidateHotelCache();
+        return id;
     }
 
     public boolean updateHotel(Hotel hotel, String countryName, String cityName) {
@@ -90,11 +101,15 @@ public class HotelService {
         hotel.setCountryId(countryId);
         hotel.setCityId(cityId);
         validateHotel(hotel);
-        return hotelDAO.update(hotel);
+        boolean ok = hotelDAO.update(hotel);
+        if (ok) invalidateHotelCache();
+        return ok;
     }
 
     public boolean deleteHotel(int id) {
-        return hotelDAO.delete(id);
+        boolean ok = hotelDAO.delete(id);
+        if (ok) invalidateHotelCache();
+        return ok;
     }
 
     private static void validateHotel(Hotel h) {
@@ -131,6 +146,11 @@ public class HotelService {
         names = names.stream().distinct().sorted(Comparator.naturalOrder()).collect(Collectors.toList());
         if (names.isEmpty()) throw new IllegalStateException("Country API returned no countries.");
         return names;
+    }
+
+    private static void invalidateHotelCache() {
+        hotelCache = List.of();
+        hotelCacheAt = Instant.EPOCH;
     }
 }
 

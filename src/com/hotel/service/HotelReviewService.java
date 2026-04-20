@@ -8,19 +8,39 @@ import com.hotel.model.Reservation;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class HotelReviewService {
+    private static final Duration CACHE_TTL = Duration.ofMinutes(2);
+    private static final Map<Integer, ReviewCacheEntry> REVIEW_CACHE = new ConcurrentHashMap<>();
+    private static final Map<Integer, AvgCacheEntry> AVG_CACHE = new ConcurrentHashMap<>();
+
     private final HotelReviewDAO hotelReviewDAO = new HotelReviewDAO();
     private final DatabaseConnection db = DatabaseConnection.getInstance();
 
     public List<HotelReview> getReviewsForHotel(int hotelId) {
-        return hotelReviewDAO.findByHotelId(hotelId);
+        ReviewCacheEntry cached = REVIEW_CACHE.get(hotelId);
+        if (cached != null && Instant.now().isBefore(cached.cachedAt.plus(CACHE_TTL))) {
+            return cached.reviews;
+        }
+        List<HotelReview> fresh = hotelReviewDAO.findByHotelId(hotelId);
+        REVIEW_CACHE.put(hotelId, new ReviewCacheEntry(fresh));
+        return fresh;
     }
 
     public double getAverageStarsForHotel(int hotelId) {
-        return hotelReviewDAO.getAverageStarsForHotel(hotelId);
+        AvgCacheEntry cached = AVG_CACHE.get(hotelId);
+        if (cached != null && Instant.now().isBefore(cached.cachedAt.plus(CACHE_TTL))) {
+            return cached.avg;
+        }
+        double fresh = hotelReviewDAO.getAverageStarsForHotel(hotelId);
+        AVG_CACHE.put(hotelId, new AvgCacheEntry(fresh));
+        return fresh;
     }
 
     public int addReview(Reservation reservation, int customerId, int stars, String comment) {
@@ -44,7 +64,9 @@ public class HotelReviewService {
         review.setCustomerId(customerId);
         review.setStars(stars);
         review.setComment(cleanComment);
-        return hotelReviewDAO.add(review);
+        int id = hotelReviewDAO.add(review);
+        invalidateHotelReviewCache(hotelId);
+        return id;
     }
 
     public boolean hasReviewForReservation(int reservationId) {
@@ -68,6 +90,29 @@ public class HotelReviewService {
             }
         } catch (Exception e) {
             throw new IllegalStateException("find hotel for reservation failed: " + e.getMessage(), e);
+        }
+    }
+
+    private static void invalidateHotelReviewCache(int hotelId) {
+        REVIEW_CACHE.remove(hotelId);
+        AVG_CACHE.remove(hotelId);
+    }
+
+    private static final class ReviewCacheEntry {
+        private final List<HotelReview> reviews;
+        private final Instant cachedAt;
+        private ReviewCacheEntry(List<HotelReview> reviews) {
+            this.reviews = List.copyOf(reviews);
+            this.cachedAt = Instant.now();
+        }
+    }
+
+    private static final class AvgCacheEntry {
+        private final double avg;
+        private final Instant cachedAt;
+        private AvgCacheEntry(double avg) {
+            this.avg = avg;
+            this.cachedAt = Instant.now();
         }
     }
 }

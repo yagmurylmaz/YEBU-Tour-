@@ -151,6 +151,18 @@
     -fx-border-color: #ffffff;
 }
 
+.top-nav-secondary {
+    -fx-padding: 0 0 2 0;
+}
+
+.top-nav-action-btn {
+    -fx-min-width: 170;
+    -fx-pref-width: 180;
+    -fx-font-size: 12;
+    -fx-font-weight: 600;
+    -fx-text-overrun: clip;
+}
+
 .page-title {
     -fx-font-size: 19;
     -fx-font-weight: 800;
@@ -302,4 +314,48 @@
 .review-star-button:selected {
     -fx-background-color: #fdb022;
     -fx-text-fill: #ffffff;
+}
+
+/* Reusable layout primitives for modular screens */
+.page-container {
+    -fx-padding: 20;
+    -fx-spacing: 14;
+}
+
+.page-container-lg {
+    -fx-padding: 24;
+    -fx-spacing: 16;
+}
+
+.split-layout {
+    -fx-spacing: 16;
+}
+
+.section-card {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 16;
+    -fx-border-color: #e5edf5;
+    -fx-border-radius: 16;
+    -fx-padding: 14;
+}
+
+.section-title {
+    -fx-font-size: 16;
+    -fx-font-weight: 700;
+    -fx-text-fill: #18324b;
+}
+
+.toolbar-row {
+    -fx-alignment: CENTER_LEFT;
+    -fx-spacing: 10;
+}
+
+.action-row {
+    -fx-alignment: CENTER_RIGHT;
+    -fx-spacing: 10;
+}
+
+.compact-scroll-content {
+    -fx-padding: 6;
+    -fx-spacing: 8;
 }

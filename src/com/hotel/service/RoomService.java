@@ -7,6 +7,7 @@ import com.hotel.model.Room;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public class RoomService {
 
@@ -48,6 +49,18 @@ public class RoomService {
 
     public List<Room> searchAvailableRooms(LocalDate checkIn, LocalDate checkOut, String roomType, Integer hotelId) {
         return roomDAO.findAvailableRooms(checkIn, checkOut, roomType, hotelId);
+    }
+
+    public void setAvailabilityRange(int roomId, LocalDate startDate, LocalDate endDate) {
+        roomDAO.replaceAvailabilityRange(roomId, startDate, endDate);
+    }
+
+    public Set<LocalDate> getAvailableDates(int roomId) {
+        return roomDAO.getAvailableDates(roomId);
+    }
+
+    public boolean isAvailableForRange(int roomId, LocalDate checkIn, LocalDate checkOut) {
+        return roomDAO.isAvailableForRange(roomId, checkIn, checkOut);
     }
 
     private void validateRoom(Room room) {

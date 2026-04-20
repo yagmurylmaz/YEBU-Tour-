@@ -5,6 +5,7 @@ import com.hotel.model.*;
 import com.hotel.service.ExtraServiceCatalogService;
 import com.hotel.service.ReservationService;
 import com.hotel.service.RoomImageService;
+import com.hotel.service.RoomService;
 import com.hotel.util.RoomImageStorage;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
@@ -15,6 +16,7 @@ import javafx.scene.layout.HBox;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class ReservationController {
     @FXML private ImageView roomImageView;
@@ -23,6 +25,8 @@ public class ReservationController {
     @FXML private Button btnNextImage;
     @FXML private Label labelRoomNo;
     @FXML private Label labelRoomType;
+    @FXML private DatePicker checkInPicker;
+    @FXML private DatePicker checkOutPicker;
     @FXML private Label labelCheckIn;
     @FXML private Label labelCheckOut;
     @FXML private Label labelNights;
@@ -44,6 +48,7 @@ public class ReservationController {
     private final ReservationService reservationService = new ReservationService();
     private final RoomImageService roomImageService = new RoomImageService();
     private final ExtraServiceCatalogService extraServiceCatalogService = new ExtraServiceCatalogService();
+    private final RoomService roomService = new RoomService();
 
     private Room      room;
     private LocalDate checkIn;
@@ -52,6 +57,7 @@ public class ReservationController {
     private final List<String> roomImagePaths = new ArrayList<>();
     private int currentImageIndex = 0;
     private final List<ExtraServiceDefinition> activeServiceDefs = new ArrayList<>();
+    private Set<LocalDate> availableDates = Set.of();
 
     @FXML
     private void initialize() {
@@ -63,15 +69,13 @@ public class ReservationController {
             MainApp.navigateTo("room-search.fxml");
             return;
         }
+        availableDates = roomService.getAvailableDates(room.getId());
         loadRoomGallery();
+        setupDatePickers();
 
         labelRoomNo.setText(room.getRoomNumber());
         labelRoomType.setText(room.getRoomTypeDisplay());
-        labelCheckIn.setText(checkIn.toString());
-        labelCheckOut.setText(checkOut.toString());
-        long nights = java.time.temporal.ChronoUnit.DAYS.between(checkIn, checkOut);
-        labelNights.setText(nights + " night(s)");
-        labelRoomPrice.setText(room.getFormattedPrice() + " × " + nights + " night(s)");
+        refreshDateSummary();
         loadServiceDefinitions();
         cbBreakfast.setOnAction(e -> updateTotal());
         cbGym.setOnAction(e -> updateTotal());
@@ -132,6 +136,10 @@ public class ReservationController {
     }
 
     private void updateTotal() {
+        if (checkIn == null || checkOut == null || !checkOut.isAfter(checkIn)) {
+            labelTotalPrice.setText("-");
+            return;
+        }
         double total = reservationService.calculateTotalPrice(
             room, checkIn, checkOut, getSelectedServices()
         );
@@ -163,6 +171,17 @@ public class ReservationController {
 
     @FXML
     private void handleConfirmReservation() {
+        try {
+            reservationService.validateDates(checkIn, checkOut);
+        } catch (IllegalArgumentException e) {
+            showAlert(Alert.AlertType.WARNING, "Date Error", e.getMessage());
+            return;
+        }
+        if (!roomService.isAvailableForRange(room.getId(), checkIn, checkOut)) {
+            showAlert(Alert.AlertType.WARNING, "Not Available",
+                "Selected room is not available for the chosen date range.");
+            return;
+        }
         int customerId = SessionManager.getInstance().getLoggedInUser().getId();
         List<Service> services = getSelectedServices();
 
@@ -246,5 +265,83 @@ public class ReservationController {
             .filter(d -> code.equalsIgnoreCase(d.getCode()))
             .findFirst()
             .orElse(null);
+    }
+
+    private void setupDatePickers() {
+        if (checkInPicker == null || checkOutPicker == null) return;
+        checkInPicker.setValue(checkIn);
+        checkOutPicker.setValue(checkOut);
+
+        checkInPicker.setDayCellFactory(dp -> new DateCell() {
+            @Override
+            public void updateItem(LocalDate item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) return;
+                boolean notInAvailability = !availableDates.isEmpty() && !availableDates.contains(item);
+                setDisable(item.isBefore(LocalDate.now()) || notInAvailability);
+            }
+        });
+
+        checkOutPicker.setDayCellFactory(dp -> new DateCell() {
+            @Override
+            public void updateItem(LocalDate item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) return;
+                LocalDate selectedCheckIn = checkInPicker.getValue();
+                boolean beforeOrSame = selectedCheckIn != null && !item.isAfter(selectedCheckIn);
+                boolean outOfAvailability = selectedCheckIn != null && !isRangeInsideAvailability(selectedCheckIn, item);
+                setDisable(item.isBefore(LocalDate.now()) || beforeOrSame || outOfAvailability);
+            }
+        });
+
+        checkInPicker.valueProperty().addListener((obs, oldV, newV) -> {
+            if (newV == null) return;
+            checkIn = newV;
+            if (checkOut == null || !checkOut.isAfter(checkIn)) {
+                checkOut = checkIn.plusDays(1);
+                checkOutPicker.setValue(checkOut);
+            } else if (!isRangeInsideAvailability(checkIn, checkOut)) {
+                checkOut = checkIn.plusDays(1);
+                checkOutPicker.setValue(checkOut);
+            }
+            refreshDateSummary();
+        });
+        checkOutPicker.valueProperty().addListener((obs, oldV, newV) -> {
+            if (newV == null) return;
+            checkOut = newV;
+            refreshDateSummary();
+        });
+    }
+
+    private void refreshDateSummary() {
+        if (checkIn == null || checkOut == null) return;
+        labelCheckIn.setText(checkIn.toString());
+        labelCheckOut.setText(checkOut.toString());
+        long nights = java.time.temporal.ChronoUnit.DAYS.between(checkIn, checkOut);
+        labelNights.setText(Math.max(0, nights) + " night(s)");
+        if (nights > 0) {
+            labelRoomPrice.setText(room.getFormattedPrice() + " × " + nights + " night(s)");
+        } else {
+            labelRoomPrice.setText("-");
+        }
+        updateTotal();
+    }
+
+    private boolean isRangeInsideAvailability(LocalDate start, LocalDate end) {
+        if (availableDates == null || availableDates.isEmpty()) return true;
+        LocalDate day = start;
+        while (day.isBefore(end)) {
+            if (!availableDates.contains(day)) return false;
+            day = day.plusDays(1);
+        }
+        return true;
+    }
+
+    private void showAlert(Alert.AlertType type, String title, String content) {
+        Alert alert = new Alert(type);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(content);
+        alert.showAndWait();
     }
 }

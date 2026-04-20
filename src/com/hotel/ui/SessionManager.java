@@ -29,7 +29,7 @@ public class SessionManager {
     }
 
     public boolean isAdmin() {
-        return loggedInUser != null && "ADMIN".equals(loggedInUser.getRole());
+        return isAdminRole(loggedInUser != null ? loggedInUser.getRole() : null);
     }
 
     public boolean ensureAdminAccess() {
@@ -42,5 +42,9 @@ public class SessionManager {
         logout();
         MainApp.navigateTo("login.fxml");
         return false;
+    }
+
+    public static boolean isAdminRole(String role) {
+        return role != null && "ADMIN".equalsIgnoreCase(role.trim());
     }
 }

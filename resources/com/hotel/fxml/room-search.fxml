@@ -23,8 +23,8 @@
     </top>
 
     <center>
-        <VBox spacing="14" style="-fx-padding: 20;">
-            <HBox spacing="10" alignment="CENTER_LEFT">
+        <VBox styleClass="page-container">
+            <HBox styleClass="toolbar-row">
                 <Label text="Check-in"/>
                 <DatePicker fx:id="checkInDatePicker"/>
                 <Label text="Check-out"/>
@@ -42,7 +42,7 @@
 
             <Label fx:id="statusLabel"/>
 
-            <HBox spacing="16" VBox.vgrow="ALWAYS">
+            <HBox styleClass="split-layout" VBox.vgrow="ALWAYS">
                 <TableView fx:id="roomTable" prefWidth="640" HBox.hgrow="ALWAYS">
                     <columns>
                         <TableColumn fx:id="colPhoto" text="Photo" prefWidth="88"/>
@@ -55,24 +55,24 @@
                     </columns>
                 </TableView>
 
-                <VBox spacing="10" prefWidth="360" styleClass="card">
-                    <Label text="Photos" styleClass="page-title"/>
-                    <StackPane styleClass="card" prefHeight="260">
+                <VBox spacing="10" prefWidth="360" styleClass="section-card">
+                    <Label text="Photos" styleClass="section-title"/>
+                    <StackPane styleClass="section-card" prefHeight="260">
                         <ImageView fx:id="selectedRoomImageView" fitWidth="320" fitHeight="240" preserveRatio="true" pickOnBounds="true"/>
                     </StackPane>
                     <ScrollPane fitToWidth="true" prefHeight="90" hbarPolicy="AS_NEEDED" vbarPolicy="NEVER">
                         <content>
-                            <HBox fx:id="selectedRoomThumbBar" spacing="8" style="-fx-padding: 6;"/>
+                            <HBox fx:id="selectedRoomThumbBar" styleClass="compact-scroll-content"/>
                         </content>
                     </ScrollPane>
                     <Separator/>
-                    <Label text="Hotel Reviews" styleClass="page-title"/>
+                    <Label text="Hotel Reviews" styleClass="section-title"/>
                     <Label fx:id="hotelRatingLabel" text="No rating yet"/>
                     <ListView fx:id="hotelReviewListView" prefHeight="170"/>
                 </VBox>
             </HBox>
 
-            <HBox alignment="CENTER_RIGHT">
+            <HBox styleClass="action-row">
                 <Button text="Make Reservation" onAction="#handleMakeReservation" styleClass="btn-primary"/>
             </HBox>
         </VBox>

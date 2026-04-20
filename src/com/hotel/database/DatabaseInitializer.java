@@ -143,15 +143,15 @@ public final class DatabaseInitializer {
     }
 
     private static boolean tableHasLegacyPaths(DatabaseConnection db, String table, String col) {
-        String sql = """
-            SELECT COUNT(*)
-            FROM %s
-            WHERE %s IS NOT NULL
-              AND %s <> ''
-              AND %s NOT LIKE 'shared-media/%%'
-              AND LOWER(%s) NOT LIKE 'http://%%'
-              AND LOWER(%s) NOT LIKE 'https://%%'
-            """.formatted(table, col, col, col, col, col);
+        String sql = String.format(
+            "SELECT COUNT(*) FROM %s " +
+                "WHERE %s IS NOT NULL " +
+                "AND %s <> '' " +
+                "AND %s NOT LIKE 'shared-media/%%' " +
+                "AND LOWER(%s) NOT LIKE 'http://%%' " +
+                "AND LOWER(%s) NOT LIKE 'https://%%'",
+            table, col, col, col, col, col
+        );
         try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
             return rs.next() && rs.getLong(1) > 0;
         } catch (Exception e) {

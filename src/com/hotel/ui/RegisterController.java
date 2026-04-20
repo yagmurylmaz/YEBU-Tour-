@@ -12,6 +12,9 @@ public class RegisterController {
     @FXML private PasswordField passwordField;
     @FXML private PasswordField confirmPasswordField;
     @FXML private TextField     phoneField;
+    @FXML private TextField     verificationCodeField;
+    @FXML private Button        sendCodeButton;
+    @FXML private Button        registerButton;
     @FXML private Label         errorLabel;
     @FXML private Label         successLabel;
 
@@ -21,10 +24,12 @@ public class RegisterController {
     private void initialize() {
         errorLabel.setVisible(false);
         successLabel.setVisible(false);
+        if (verificationCodeField != null) verificationCodeField.setDisable(true);
+        if (registerButton != null) registerButton.setDisable(true);
     }
 
     @FXML
-    private void handleRegister() {
+    private void handleSendCode() {
         errorLabel.setVisible(false);
         successLabel.setVisible(false);
 
@@ -38,7 +43,26 @@ public class RegisterController {
             return;
         }
 
-        String result = authService.register(fullName, email, password, phone);
+        if (sendCodeButton != null) sendCodeButton.setDisable(true);
+        String result = authService.requestRegistrationVerificationCode(fullName, email, password, phone);
+        if (sendCodeButton != null) sendCodeButton.setDisable(false);
+        if ("OK".equals(result)) {
+            if (verificationCodeField != null) verificationCodeField.setDisable(false);
+            if (registerButton != null) registerButton.setDisable(false);
+            showSuccess("Verification code sent to your email. Enter the code to complete registration.");
+        } else {
+            showError(result);
+        }
+    }
+
+    @FXML
+    private void handleRegister() {
+        errorLabel.setVisible(false);
+        successLabel.setVisible(false);
+
+        String email = emailField.getText().trim();
+        String code = verificationCodeField.getText() != null ? verificationCodeField.getText().trim() : "";
+        String result = authService.verifyRegistrationCodeAndCreateUser(email, code);
 
         if ("OK".equals(result)) {
             showSuccess("Registration successful! Redirecting to login screen...");

@@ -194,6 +194,18 @@ public final class DatabaseConnection {
                   CONSTRAINT fk_prt_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
                 """);
+            st.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS registration_verification_tokens (
+                  email VARCHAR(255) PRIMARY KEY,
+                  full_name VARCHAR(255) NOT NULL,
+                  phone VARCHAR(64) NOT NULL,
+                  password_hash VARCHAR(255) NOT NULL,
+                  code_hash CHAR(64) NOT NULL,
+                  expires_at DATETIME NOT NULL,
+                  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  INDEX idx_rvt_expires_at (expires_at)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+                """);
             schemaReady = true;
         } catch (SQLException e) {
             throw new IllegalStateException("Failed to create database schema: " + e.getMessage(), e);

@@ -93,6 +93,75 @@ public class EmailService {
         Transport.send(message);
     }
 
+    public void sendRegistrationVerificationCode(String toEmail, String recipientName, String plainCode) throws Exception {
+        if (!MailConfig.isSmtpConfigured(mailProps)) {
+            throw new IllegalStateException("SMTP is not configured.");
+        }
+        String host = mailProps.getProperty("mail.smtp.host").trim();
+        int port = Integer.parseInt(mailProps.getProperty("mail.smtp.port", "587").trim());
+        boolean auth = Boolean.parseBoolean(mailProps.getProperty("mail.smtp.auth", "true"));
+        boolean startTls = Boolean.parseBoolean(mailProps.getProperty("mail.smtp.starttls.enable", "true"));
+        String user = mailProps.getProperty("mail.user", "").trim();
+        String password = mailProps.getProperty("mail.password", "");
+        String from = mailProps.getProperty("mail.from").trim();
+        String fromName = mailProps.getProperty("mail.from.name", "YEBU Tour").trim();
+
+        Properties props = new Properties();
+        props.put("mail.smtp.host", host);
+        props.put("mail.smtp.port", String.valueOf(port));
+        props.put("mail.smtp.auth", String.valueOf(auth));
+        props.put("mail.smtp.starttls.enable", String.valueOf(startTls));
+
+        copySmtpOption(mailProps, props, "mail.smtp.starttls.required");
+        copySmtpOption(mailProps, props, "mail.smtp.ssl.protocols");
+        copySmtpOption(mailProps, props, "mail.smtp.ssl.trust");
+        copySmtpOption(mailProps, props, "mail.smtp.connectiontimeout");
+        copySmtpOption(mailProps, props, "mail.smtp.timeout");
+        copySmtpOption(mailProps, props, "mail.smtp.writetimeout");
+
+        if (host.toLowerCase().contains("gmail.com")) {
+            props.putIfAbsent("mail.smtp.starttls.required", "true");
+            props.putIfAbsent("mail.smtp.ssl.protocols", "TLSv1.2 TLSv1.3");
+            props.putIfAbsent("mail.smtp.ssl.trust", host);
+        }
+        props.putIfAbsent("mail.smtp.connectiontimeout", "15000");
+        props.putIfAbsent("mail.smtp.timeout", "15000");
+
+        boolean debug = Boolean.parseBoolean(mailProps.getProperty("mail.debug", "false"));
+        props.put("mail.debug", String.valueOf(debug));
+
+        Session session = Session.getInstance(props, auth ? new Authenticator() {
+            @Override
+            protected PasswordAuthentication getPasswordAuthentication() {
+                return new PasswordAuthentication(user, password);
+            }
+        } : null);
+
+        MimeMessage message = new MimeMessage(session);
+        message.setFrom(new InternetAddress(from, fromName, "UTF-8"));
+        message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(toEmail, false));
+        message.setSubject("Your YEBU Tour registration code", "UTF-8");
+
+        String greeting = (recipientName != null && !recipientName.isBlank()) ? recipientName.trim() : "there";
+        String body = """
+            Hello %s,
+
+            Use this verification code to complete your YEBU Tour account registration:
+
+            %s
+
+            This code expires in 10 minutes.
+
+            If you did not request this, you can ignore this email.
+
+            Best regards,
+            YEBU Tour
+            """.formatted(greeting, plainCode);
+
+        message.setText(body, "UTF-8");
+        Transport.send(message);
+    }
+
     private static void copySmtpOption(Properties from, Properties to, String key) {
         String v = from.getProperty(key);
         if (v != null && !v.isBlank()) {

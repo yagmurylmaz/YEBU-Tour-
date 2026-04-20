@@ -47,11 +47,18 @@
                 <TextField fx:id="phoneField" promptText="+1 555 000 0000"
                            styleClass="text-field"/>
             </VBox>
+            <VBox spacing="4">
+                <Label text="Verification Code" styleClass="field-label"/>
+                <TextField fx:id="verificationCodeField" promptText="Enter 6-digit code from email"
+                           styleClass="text-field"/>
+            </VBox>
 
             <Label fx:id="errorLabel"   styleClass="error-label"   wrapText="true"/>
             <Label fx:id="successLabel" styleClass="success-label" wrapText="true"/>
 
-            <Button text="Register" onAction="#handleRegister"
+            <Button fx:id="sendCodeButton" text="Send Verification Code" onAction="#handleSendCode"
+                    styleClass="btn-outline" maxWidth="Infinity"/>
+            <Button fx:id="registerButton" text="Register" onAction="#handleRegister"
                     styleClass="btn-primary" maxWidth="Infinity"/>
             <Hyperlink text="← Back to login" onAction="#handleBackToLogin"
                        styleClass="link"/>

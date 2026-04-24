@@ -757,3 +757,43 @@
     -fx-background-radius: 10;
     -fx-padding: 8 10;
 }
+
+.skeleton-card {
+    -fx-opacity: 0.95;
+}
+
+.skeleton-block {
+    -fx-background-color: #e9edf3;
+    -fx-background-radius: 10;
+}
+
+.skeleton-image {
+    -fx-min-height: 154;
+    -fx-pref-height: 154;
+    -fx-max-height: 154;
+    -fx-background-radius: 20 20 0 0;
+}
+
+.skeleton-line-title {
+    -fx-min-height: 16;
+    -fx-pref-height: 16;
+    -fx-max-height: 16;
+    -fx-min-width: 170;
+    -fx-max-width: 220;
+}
+
+.skeleton-line-short {
+    -fx-min-height: 12;
+    -fx-pref-height: 12;
+    -fx-max-height: 12;
+    -fx-min-width: 120;
+    -fx-max-width: 160;
+}
+
+.skeleton-line-medium {
+    -fx-min-height: 12;
+    -fx-pref-height: 12;
+    -fx-max-height: 12;
+    -fx-min-width: 150;
+    -fx-max-width: 200;
+}

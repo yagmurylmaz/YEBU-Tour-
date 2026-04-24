@@ -11,6 +11,8 @@ import com.hotel.service.FavoriteHotelService;
 import com.hotel.service.RoomImageService;
 import com.hotel.service.RoomService;
 import com.hotel.util.ImageStorageService;
+import javafx.animation.FadeTransition;
+import javafx.animation.PauseTransition;
 import javafx.animation.ScaleTransition;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
@@ -20,6 +22,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.paint.Color;
@@ -28,6 +31,7 @@ import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
@@ -53,7 +57,6 @@ public class CustomerDashboardController {
     @FXML private Label supportStatusLabel;
     @FXML private GridPane hotelCardContainer;
     @FXML private Button favoriteFilterButton;
-    @FXML private Button loadMoreButton;
     @FXML private ScrollPane hotelScrollPane;
 
     private final HotelService hotelService = new HotelService();
@@ -73,6 +76,9 @@ public class CustomerDashboardController {
     private boolean showOnlyFavorites = false;
     private int visibleHotelCount = PAGE_SIZE;
     private boolean autoLoadingMore = false;
+    private String activeFilterKey = "";
+    private int renderedHotelCount = 0;
+    private boolean pendingAppend = false;
 
     @FXML
     private void initialize() {
@@ -87,7 +93,6 @@ public class CustomerDashboardController {
         setupHotelGridColumns();
         setupInfiniteScroll();
         refreshFavoriteFilterButton();
-        refreshLoadMoreButton(0, 0);
         renderHotelCardsAsync();
     }
 
@@ -168,37 +173,45 @@ public class CustomerDashboardController {
     private void renderHotelCardsAsync() {
         if (hotelCardContainer == null) return;
         long token = renderToken.incrementAndGet();
-        hotelCardContainer.getChildren().clear();
-        Label loading = new Label("Loading hotels...");
-        loading.getStyleClass().add("text-muted");
-        hotelCardContainer.add(loading, 0, 0);
-        GridPane.setColumnSpan(loading, 3);
-        GridPane.setHalignment(loading, HPos.CENTER);
         List<Hotel> filteredHotels = getFilteredHotels();
+        String filterKey = buildFilterKey(filteredHotels);
+        boolean append = pendingAppend && filterKey.equals(activeFilterKey);
+        pendingAppend = false;
+        if (!append) {
+            activeFilterKey = filterKey;
+            renderedHotelCount = 0;
+            hotelCardContainer.getChildren().clear();
+            showSkeletonCards();
+        }
         List<Hotel> hotels = limitVisibleHotels(filteredHotels);
-        int totalHotels = filteredHotels.size();
         backgroundExecutor.submit(() -> {
             List<HotelCardData> cardDataList = prepareCardData(hotels);
-            int featuredHotelId = pickFeaturedHotelId(cardDataList);
-            Platform.runLater(() -> renderPreparedCards(token, cardDataList, featuredHotelId, totalHotels));
+            int featuredHotelId = pickFeaturedHotelId(filteredHotels);
+            Platform.runLater(() -> renderPreparedCards(token, cardDataList, featuredHotelId, append, filterKey));
         });
     }
 
-    private void renderPreparedCards(long token, List<HotelCardData> cardDataList, int featuredHotelId, int totalHotels) {
+    private void renderPreparedCards(long token, List<HotelCardData> cardDataList, int featuredHotelId, boolean append, String filterKey) {
         if (hotelCardContainer == null) return;
         if (token != renderToken.get()) return;
-        hotelCardContainer.getChildren().clear();
+        if (!append || !filterKey.equals(activeFilterKey)) {
+            hotelCardContainer.getChildren().clear();
+            renderedHotelCount = 0;
+            activeFilterKey = filterKey;
+        }
         if (cardDataList.isEmpty()) {
             Label empty = new Label("No hotels found.");
             empty.getStyleClass().add("text-muted");
             hotelCardContainer.add(empty, 0, 0);
             GridPane.setColumnSpan(empty, 3);
             GridPane.setHalignment(empty, HPos.CENTER);
-            refreshLoadMoreButton(totalHotels, 0);
+            autoLoadingMore = false;
             return;
         }
 
-        for (int i = 0; i < cardDataList.size(); i++) {
+        int startIndex = append ? renderedHotelCount : 0;
+        startIndex = Math.min(startIndex, cardDataList.size());
+        for (int i = startIndex; i < cardDataList.size(); i++) {
             HotelCardData data = cardDataList.get(i);
             VBox card = createHotelCard(data, data.hotel().getId() == featuredHotelId);
             int col = i % 3;
@@ -207,8 +220,10 @@ public class CustomerDashboardController {
             GridPane.setHalignment(card, HPos.CENTER);
             GridPane.setFillWidth(card, true);
             GridPane.setHgrow(card, Priority.ALWAYS);
+            playCardFadeIn(card, i - startIndex);
         }
-        refreshLoadMoreButton(totalHotels, cardDataList.size());
+        renderedHotelCount = cardDataList.size();
+        autoLoadingMore = false;
     }
 
     private VBox createHotelCard(HotelCardData data, boolean featured) {
@@ -381,12 +396,6 @@ public class CustomerDashboardController {
         renderHotelCardsAsync();
     }
 
-    @FXML
-    private void handleLoadMoreHotels() {
-        visibleHotelCount += PAGE_SIZE;
-        renderHotelCardsAsync();
-    }
-
     private void setupInfiniteScroll() {
         if (hotelScrollPane == null) return;
         hotelScrollPane.vvalueProperty().addListener((obs, oldVal, newVal) -> {
@@ -396,6 +405,7 @@ public class CustomerDashboardController {
             int total = getFilteredHotels().size();
             if (visibleHotelCount >= total) return;
             autoLoadingMore = true;
+            pendingAppend = true;
             visibleHotelCount += PAGE_SIZE;
             renderHotelCardsAsync();
         });
@@ -406,21 +416,47 @@ public class CustomerDashboardController {
         User user = SessionManager.getInstance().getLoggedInUser();
         if (user == null) return;
         playFavoritePopAnimation(sourceButton, () -> {
+            boolean wasFavorite = favoriteHotelIds.contains(hotel.getId());
+            boolean expectedFavorite = !wasFavorite;
+            if (expectedFavorite) {
+                favoriteHotelIds.add(hotel.getId());
+            } else {
+                favoriteHotelIds.remove(hotel.getId());
+            }
+            updateFavoriteIcon(sourceButton, expectedFavorite);
             sourceButton.setDisable(true);
             sourceButton.setOpacity(0.8);
             backgroundExecutor.submit(() -> {
-                boolean nowFavorite = favoriteHotelService.toggleFavorite(user.getId(), hotel.getId());
+                boolean nowFavorite;
+                Exception failure = null;
+                try {
+                    nowFavorite = favoriteHotelService.toggleFavorite(user.getId(), hotel.getId());
+                } catch (Exception ex) {
+                    nowFavorite = wasFavorite;
+                    failure = ex;
+                }
+                boolean finalNowFavorite = nowFavorite;
+                Exception finalFailure = failure;
                 Platform.runLater(() -> {
-                    if (nowFavorite) {
-                        favoriteHotelIds.add(hotel.getId());
-                    } else {
-                        favoriteHotelIds.remove(hotel.getId());
+                    if (finalFailure != null) {
+                        if (wasFavorite) {
+                            favoriteHotelIds.add(hotel.getId());
+                        } else {
+                            favoriteHotelIds.remove(hotel.getId());
+                        }
+                        updateFavoriteIcon(sourceButton, wasFavorite);
+                        showNonBlockingWarning("Favorite update failed. Please try again.");
+                    } else if (finalNowFavorite != expectedFavorite) {
+                        if (finalNowFavorite) {
+                            favoriteHotelIds.add(hotel.getId());
+                        } else {
+                            favoriteHotelIds.remove(hotel.getId());
+                        }
+                        updateFavoriteIcon(sourceButton, finalNowFavorite);
                     }
                     refreshFavoriteFilterButton();
-                    if (showOnlyFavorites && !nowFavorite) {
+                    if (showOnlyFavorites && !favoriteHotelIds.contains(hotel.getId())) {
                         renderHotelCardsAsync();
-                    } else {
-                        updateFavoriteIcon(sourceButton, nowFavorite);
                     }
                     sourceButton.setDisable(false);
                     sourceButton.setOpacity(1.0);
@@ -456,6 +492,72 @@ public class CustomerDashboardController {
         popIn.playFromStart();
     }
 
+    private void playCardFadeIn(VBox card, int sequenceIndex) {
+        if (card == null) return;
+        card.setOpacity(0.0);
+        FadeTransition fade = new FadeTransition(Duration.millis(170), card);
+        fade.setFromValue(0.0);
+        fade.setToValue(1.0);
+        fade.setDelay(Duration.millis(Math.min(sequenceIndex * 20L, 100)));
+        fade.play();
+    }
+
+    private void showSkeletonCards() {
+        if (hotelCardContainer == null) return;
+        for (int i = 0; i < 6; i++) {
+            VBox skeleton = createSkeletonCard();
+            int col = i % 3;
+            int row = i / 3;
+            hotelCardContainer.add(skeleton, col, row);
+            GridPane.setHalignment(skeleton, HPos.CENTER);
+            GridPane.setFillWidth(skeleton, true);
+            GridPane.setHgrow(skeleton, Priority.ALWAYS);
+        }
+    }
+
+    private VBox createSkeletonCard() {
+        VBox card = new VBox(10);
+        card.getStyleClass().addAll("hotel-list-card", "skeleton-card");
+        card.setPrefWidth(260);
+        card.setMaxWidth(Double.MAX_VALUE);
+
+        Region image = new Region();
+        image.getStyleClass().addAll("skeleton-block", "skeleton-image");
+
+        VBox body = new VBox(10);
+        body.getStyleClass().add("hotel-card-body");
+
+        Region line1 = new Region();
+        line1.getStyleClass().addAll("skeleton-block", "skeleton-line-title");
+        Region line2 = new Region();
+        line2.getStyleClass().addAll("skeleton-block", "skeleton-line-short");
+        Region line3 = new Region();
+        line3.getStyleClass().addAll("skeleton-block", "skeleton-line-medium");
+
+        body.getChildren().addAll(line1, line2, line3);
+        card.getChildren().addAll(image, body);
+        return card;
+    }
+
+    private void showNonBlockingWarning(String message) {
+        if (favoriteFilterButton == null || message == null || message.isBlank()) return;
+        Tooltip tip = new Tooltip(message);
+        tip.setAutoHide(true);
+        tip.setShowDelay(Duration.ZERO);
+        tip.setHideDelay(Duration.seconds(2.5));
+        favoriteFilterButton.setTooltip(tip);
+        var screenPoint = favoriteFilterButton.localToScreen(0, favoriteFilterButton.getHeight());
+        if (screenPoint == null) return;
+        tip.show(favoriteFilterButton, screenPoint.getX(), screenPoint.getY() + 6);
+        PauseTransition cleanup = new PauseTransition(Duration.seconds(2.6));
+        cleanup.setOnFinished(e -> {
+            if (favoriteFilterButton.getTooltip() == tip) {
+                favoriteFilterButton.setTooltip(null);
+            }
+        });
+        cleanup.play();
+    }
+
     private List<HotelCardData> prepareCardData(List<Hotel> hotels) {
         if (hotels == null || hotels.isEmpty()) return List.of();
         Map<Integer, List<Room>> roomMap = new HashMap<>();
@@ -476,10 +578,10 @@ public class CustomerDashboardController {
         return out;
     }
 
-    private int pickFeaturedHotelId(List<HotelCardData> cardDataList) {
-        return cardDataList.stream()
-            .max(Comparator.comparingDouble(HotelCardData::avgStars))
-            .map(d -> d.hotel().getId())
+    private int pickFeaturedHotelId(List<Hotel> hotels) {
+        return hotels.stream()
+            .max(Comparator.comparingDouble(h -> hotelReviewService.getAverageStarsForHotel(h.getId())))
+            .map(Hotel::getId)
             .orElse(-1);
     }
 
@@ -509,15 +611,13 @@ public class CustomerDashboardController {
         }
     }
 
-    private void refreshLoadMoreButton(int totalHotels, int shownHotels) {
-        autoLoadingMore = false;
-        if (loadMoreButton == null) return;
-        boolean hasMore = totalHotels > shownHotels;
-        loadMoreButton.setVisible(hasMore);
-        loadMoreButton.setManaged(hasMore);
-        if (hasMore) {
-            loadMoreButton.setText("Load More (" + shownHotels + "/" + totalHotels + ")");
+    private String buildFilterKey(List<Hotel> hotels) {
+        if (hotels == null || hotels.isEmpty()) return showOnlyFavorites ? "fav:empty" : "all:empty";
+        StringBuilder sb = new StringBuilder(showOnlyFavorites ? "fav:" : "all:");
+        for (Hotel h : hotels) {
+            sb.append(h.getId()).append(',');
         }
+        return sb.toString();
     }
 
     private String joinNonBlank(String first, String second) {

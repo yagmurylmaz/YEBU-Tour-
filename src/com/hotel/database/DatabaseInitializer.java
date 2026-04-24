@@ -34,11 +34,6 @@ public final class DatabaseInitializer {
                 "ADMIN"
             );
             new UserDAO().save(admin);
-            RoomDAO roomDAO = new RoomDAO();
-            addRoom(roomDAO, "101", Room.RoomType.SINGLE, 1400, 1, "Budget single room");
-            addRoom(roomDAO, "102", Room.RoomType.DOUBLE, 2100, 2, "Comfort double room");
-            addRoom(roomDAO, "201", Room.RoomType.SUITE, 3400, 3, "Sea view suite");
-            addRoom(roomDAO, "301", Room.RoomType.DELUXE, 4200, 4, "Deluxe family room");
         }
         initialized = true;
     }

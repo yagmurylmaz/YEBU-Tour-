@@ -185,10 +185,28 @@ public class CustomerDashboardController {
         }
         List<Hotel> hotels = limitVisibleHotels(filteredHotels);
         backgroundExecutor.submit(() -> {
-            List<HotelCardData> cardDataList = prepareCardData(hotels);
-            int featuredHotelId = pickFeaturedHotelId(filteredHotels);
-            Platform.runLater(() -> renderPreparedCards(token, cardDataList, featuredHotelId, append, filterKey));
+            try {
+                List<HotelCardData> cardDataList = prepareCardData(hotels);
+                int featuredHotelId = pickFeaturedHotelId(filteredHotels);
+                Platform.runLater(() -> renderPreparedCards(token, cardDataList, featuredHotelId, append, filterKey));
+            } catch (Exception ex) {
+                Platform.runLater(() -> renderLoadingError(token, ex));
+            }
         });
+    }
+
+    private void renderLoadingError(long token, Exception ex) {
+        if (hotelCardContainer == null) return;
+        if (token != renderToken.get()) return;
+        hotelCardContainer.getChildren().clear();
+        Label error = new Label("Hotels could not be loaded. Please try again.");
+        error.getStyleClass().add("error-label");
+        hotelCardContainer.add(error, 0, 0);
+        GridPane.setColumnSpan(error, 3);
+        GridPane.setHalignment(error, HPos.CENTER);
+        autoLoadingMore = false;
+        pendingAppend = false;
+        System.err.println("[CustomerDashboard] Hotel render failed: " + ex.getMessage());
     }
 
     private void renderPreparedCards(long token, List<HotelCardData> cardDataList, int featuredHotelId, boolean append, String filterKey) {
@@ -579,10 +597,21 @@ public class CustomerDashboardController {
     }
 
     private int pickFeaturedHotelId(List<Hotel> hotels) {
-        return hotels.stream()
-            .max(Comparator.comparingDouble(h -> hotelReviewService.getAverageStarsForHotel(h.getId())))
-            .map(Hotel::getId)
-            .orElse(-1);
+        if (hotels == null || hotels.isEmpty()) return -1;
+        int featuredId = hotels.get(0).getId();
+        double maxAvg = -1.0;
+        for (Hotel h : hotels) {
+            try {
+                double avg = hotelReviewService.getAverageStarsForHotel(h.getId());
+                if (avg > maxAvg) {
+                    maxAvg = avg;
+                    featuredId = h.getId();
+                }
+            } catch (Exception ignored) {
+                // keep rendering even if one hotel's review average fails
+            }
+        }
+        return featuredId;
     }
 
     private List<Hotel> getFilteredHotels() {

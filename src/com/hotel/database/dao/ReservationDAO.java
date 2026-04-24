@@ -143,7 +143,13 @@ public class ReservationDAO implements IReservationDAO {
         r.setCheckInDate(rs.getObject("check_in", LocalDate.class));
         r.setCheckOutDate(rs.getObject("check_out", LocalDate.class));
         r.setTotalPrice(rs.getDouble("total_price"));
-        r.setStatus(Status.valueOf(rs.getString("status")));
+        String rawStatus = rs.getString("status");
+        try {
+            r.setStatus(Status.valueOf(rawStatus));
+        } catch (Exception ignored) {
+            // Keep admin/customer screens resilient even if DB has legacy/custom status values.
+            r.setStatus(Status.APPROVED);
+        }
         r.setCreatedAt(rs.getString("created_at"));
         r.setCustomerName(rs.getString("customer_name"));
         r.setRoomNumber(rs.getString("room_number"));

@@ -67,8 +67,8 @@
                     </ScrollPane>
                     <Separator/>
                     <Label text="Hotel Reviews" styleClass="section-title"/>
-                    <Label fx:id="hotelRatingLabel" text="No rating yet"/>
-                    <ListView fx:id="hotelReviewListView" prefHeight="170"/>
+                    <Label fx:id="hotelRatingLabel" text="No rating yet" wrapText="true"/>
+                    <ListView fx:id="hotelReviewListView" prefHeight="170" prefWidth="330" maxWidth="330"/>
                 </VBox>
             </HBox>
 

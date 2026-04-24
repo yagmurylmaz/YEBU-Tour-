@@ -17,6 +17,7 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
+import javafx.scene.text.Text;
 
 import java.time.LocalDate;
 import java.util.HashMap;
@@ -114,6 +115,7 @@ public class RoomSearchController {
                 loadHotelReviews(room);
             }
         });
+        setupReviewListView();
     }
 
     @FXML
@@ -322,6 +324,27 @@ public class RoomSearchController {
                 .toList();
             hotelReviewListView.setItems(FXCollections.observableArrayList(rows));
         }
+    }
+
+    private void setupReviewListView() {
+        if (hotelReviewListView == null) return;
+        hotelReviewListView.setCellFactory(list -> new ListCell<>() {
+            private final Text text = new Text();
+            {
+                text.wrappingWidthProperty().bind(list.widthProperty().subtract(28));
+                setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+            }
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null || item.isBlank()) {
+                    setGraphic(null);
+                    return;
+                }
+                text.setText(item);
+                setGraphic(text);
+            }
+        });
     }
 
     private Integer resolveSelectedHotelId() {

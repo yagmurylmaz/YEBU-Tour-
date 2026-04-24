@@ -176,6 +176,19 @@ public final class DatabaseConnection {
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
                 """);
             st.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS user_favorite_hotels (
+                  id INT AUTO_INCREMENT PRIMARY KEY,
+                  user_id INT NOT NULL,
+                  hotel_id INT NOT NULL,
+                  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  CONSTRAINT fk_ufh_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                  CONSTRAINT fk_ufh_hotel FOREIGN KEY (hotel_id) REFERENCES hotels(id) ON DELETE CASCADE,
+                  UNIQUE KEY uq_ufh_user_hotel (user_id, hotel_id),
+                  INDEX idx_ufh_user (user_id),
+                  INDEX idx_ufh_hotel (hotel_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+                """);
+            st.executeUpdate("""
                 CREATE TABLE IF NOT EXISTS app_meta (
                   meta_key VARCHAR(128) PRIMARY KEY,
                   meta_value VARCHAR(512) NULL,

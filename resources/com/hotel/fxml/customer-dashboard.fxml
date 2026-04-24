@@ -18,6 +18,7 @@
             <Text text="YEBU Tour" styleClass="nav-brand"/>
             <Region HBox.hgrow="ALWAYS"/>
             <Label fx:id="welcomeLabel" styleClass="nav-welcome"/>
+            <Button fx:id="favoriteFilterButton" text="My Favorites" onAction="#handleToggleFavoritesFilter" styleClass="btn-outline-sm"/>
             <Button text="My Reservations" onAction="#handleMyReservations" styleClass="btn-outline-sm"/>
             <Button text="Log Out" onAction="#handleLogout" styleClass="btn-outline-sm"/>
         </HBox>
@@ -26,11 +27,12 @@
         <VBox spacing="12" styleClass="page-container" alignment="TOP_CENTER">
             <Label text="Discover Hotels" styleClass="discover-title"/>
             <Label text="Modern picks curated for your next stay" styleClass="discover-subtitle"/>
-            <ScrollPane fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" VBox.vgrow="ALWAYS">
+            <ScrollPane fx:id="hotelScrollPane" fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" VBox.vgrow="ALWAYS">
                 <content>
                     <GridPane fx:id="hotelCardContainer" hgap="16" vgap="16" alignment="TOP_CENTER" styleClass="hotel-grid"/>
                 </content>
             </ScrollPane>
+            <Button fx:id="loadMoreButton" text="Load More" onAction="#handleLoadMoreHotels" styleClass="btn-outline-sm"/>
         </VBox>
     </center>
 

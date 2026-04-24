@@ -95,8 +95,8 @@ public class HotelDAO {
                    h.image_path,
                    co.name AS country_name, ci.name AS city_name
             FROM hotels h
-            JOIN countries co ON h.country_id = co.id
-            JOIN cities ci ON h.city_id = ci.id
+            LEFT JOIN countries co ON h.country_id = co.id
+            LEFT JOIN cities ci ON h.city_id = ci.id
             ORDER BY h.id
             """;
         List<Hotel> list = new ArrayList<>();
@@ -114,8 +114,8 @@ public class HotelDAO {
                    h.image_path,
                    co.name AS country_name, ci.name AS city_name
             FROM hotels h
-            JOIN countries co ON h.country_id = co.id
-            JOIN cities ci ON h.city_id = ci.id
+            LEFT JOIN countries co ON h.country_id = co.id
+            LEFT JOIN cities ci ON h.city_id = ci.id
             WHERE h.id=?
             """;
         try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {

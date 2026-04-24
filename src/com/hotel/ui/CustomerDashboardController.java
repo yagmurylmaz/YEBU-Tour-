@@ -7,18 +7,22 @@ import com.hotel.model.Room;
 import com.hotel.model.User;
 import com.hotel.service.HotelReviewService;
 import com.hotel.service.HotelService;
+import com.hotel.service.FavoriteHotelService;
 import com.hotel.service.RoomImageService;
 import com.hotel.service.RoomService;
 import com.hotel.util.ImageStorageService;
 import javafx.animation.ScaleTransition;
+import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.value.ObservableNumberValue;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.paint.Color;
 import javafx.geometry.HPos;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
@@ -27,27 +31,48 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.shape.SVGPath;
 import javafx.util.Duration;
 
 import java.awt.Desktop;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class CustomerDashboardController {
 
     @FXML private Label welcomeLabel;
     @FXML private Label supportStatusLabel;
     @FXML private GridPane hotelCardContainer;
+    @FXML private Button favoriteFilterButton;
+    @FXML private Button loadMoreButton;
+    @FXML private ScrollPane hotelScrollPane;
 
     private final HotelService hotelService = new HotelService();
     private final HotelReviewService hotelReviewService = new HotelReviewService();
+    private final FavoriteHotelService favoriteHotelService = new FavoriteHotelService();
     private final RoomService roomService = new RoomService();
     private final RoomImageService roomImageService = new RoomImageService();
-    private List<Hotel> hotels = List.of();
+    private final ExecutorService backgroundExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "customer-dashboard-bg");
+        t.setDaemon(true);
+        return t;
+    });
+    private final AtomicLong renderToken = new AtomicLong(0);
+    private static final int PAGE_SIZE = 9;
+    private List<Hotel> allHotels = List.of();
+    private Set<Integer> favoriteHotelIds = new LinkedHashSet<>();
+    private boolean showOnlyFavorites = false;
+    private int visibleHotelCount = PAGE_SIZE;
+    private boolean autoLoadingMore = false;
 
     @FXML
     private void initialize() {
@@ -55,9 +80,15 @@ public class CustomerDashboardController {
         if (user != null) {
             welcomeLabel.setText("Welcome, " + user.getFullName() + "!");
         }
-        hotels = hotelService.getAllHotels();
+        allHotels = hotelService.getAllHotels();
+        if (user != null) {
+            favoriteHotelIds = new LinkedHashSet<>(favoriteHotelService.getFavoriteHotelIdsForUser(user.getId()));
+        }
         setupHotelGridColumns();
-        renderHotelCards();
+        setupInfiniteScroll();
+        refreshFavoriteFilterButton();
+        refreshLoadMoreButton(0, 0);
+        renderHotelCardsAsync();
     }
 
     /** Exactly three hotel cards per row; additional rows stack below. */
@@ -134,20 +165,42 @@ public class CustomerDashboardController {
         alert.showAndWait();
     }
 
-    private void renderHotelCards() {
+    private void renderHotelCardsAsync() {
         if (hotelCardContainer == null) return;
+        long token = renderToken.incrementAndGet();
         hotelCardContainer.getChildren().clear();
-        if (hotels.isEmpty()) {
+        Label loading = new Label("Loading hotels...");
+        loading.getStyleClass().add("text-muted");
+        hotelCardContainer.add(loading, 0, 0);
+        GridPane.setColumnSpan(loading, 3);
+        GridPane.setHalignment(loading, HPos.CENTER);
+        List<Hotel> filteredHotels = getFilteredHotels();
+        List<Hotel> hotels = limitVisibleHotels(filteredHotels);
+        int totalHotels = filteredHotels.size();
+        backgroundExecutor.submit(() -> {
+            List<HotelCardData> cardDataList = prepareCardData(hotels);
+            int featuredHotelId = pickFeaturedHotelId(cardDataList);
+            Platform.runLater(() -> renderPreparedCards(token, cardDataList, featuredHotelId, totalHotels));
+        });
+    }
+
+    private void renderPreparedCards(long token, List<HotelCardData> cardDataList, int featuredHotelId, int totalHotels) {
+        if (hotelCardContainer == null) return;
+        if (token != renderToken.get()) return;
+        hotelCardContainer.getChildren().clear();
+        if (cardDataList.isEmpty()) {
             Label empty = new Label("No hotels found.");
             empty.getStyleClass().add("text-muted");
             hotelCardContainer.add(empty, 0, 0);
             GridPane.setColumnSpan(empty, 3);
             GridPane.setHalignment(empty, HPos.CENTER);
+            refreshLoadMoreButton(totalHotels, 0);
             return;
         }
 
-        for (int i = 0; i < hotels.size(); i++) {
-            VBox card = createHotelCard(hotels.get(i), i == 0);
+        for (int i = 0; i < cardDataList.size(); i++) {
+            HotelCardData data = cardDataList.get(i);
+            VBox card = createHotelCard(data, data.hotel().getId() == featuredHotelId);
             int col = i % 3;
             int row = i / 3;
             hotelCardContainer.add(card, col, row);
@@ -155,9 +208,11 @@ public class CustomerDashboardController {
             GridPane.setFillWidth(card, true);
             GridPane.setHgrow(card, Priority.ALWAYS);
         }
+        refreshLoadMoreButton(totalHotels, cardDataList.size());
     }
 
-    private VBox createHotelCard(Hotel hotel, boolean featured) {
+    private VBox createHotelCard(HotelCardData data, boolean featured) {
+        Hotel hotel = data.hotel();
         ObservableNumberValue responsiveCardWidth = Bindings.max(
             210.0,
             hotelCardContainer.widthProperty().subtract(44).divide(3.0)
@@ -187,7 +242,7 @@ public class CustomerDashboardController {
             imageClip.setHeight(bounds.getHeight());
         });
         imageWrap.setClip(imageClip);
-        ImageView cover = new ImageView(resolveCoverImage(hotel));
+        ImageView cover = new ImageView(data.coverImage());
         cover.fitWidthProperty().bind(responsiveCardWidth);
         cover.fitHeightProperty().bind(responsiveImageHeight);
         cover.setPreserveRatio(false);
@@ -200,8 +255,12 @@ public class CustomerDashboardController {
         featuredBadge.setManaged(featured);
         StackPane.setAlignment(featuredBadge, javafx.geometry.Pos.TOP_LEFT);
 
-        Label favorite = new Label("♡");
+        Button favorite = new Button();
+        favorite.setText("");
+        favorite.setFocusTraversable(false);
         favorite.getStyleClass().add("hotel-favorite-badge");
+        updateFavoriteIcon(favorite, isFavoriteHotel(hotel.getId()));
+        favorite.setOnAction(e -> handleFavoriteToggle(hotel, favorite));
         StackPane.setAlignment(favorite, javafx.geometry.Pos.TOP_RIGHT);
 
         imageWrap.getChildren().addAll(cover, featuredBadge, favorite);
@@ -215,9 +274,9 @@ public class CustomerDashboardController {
         Label location = new Label("📍 " + joinNonBlank(hotel.getCityName(), hotel.getCountryName()));
         location.getStyleClass().add("hotel-list-location");
 
-        List<Room> rooms = roomService.getRoomsByHotelId(hotel.getId());
-        List<HotelReview> reviews = hotelReviewService.getReviewsForHotel(hotel.getId());
-        double avg = hotelReviewService.getAverageStarsForHotel(hotel.getId());
+        List<Room> rooms = data.rooms();
+        List<HotelReview> reviews = data.reviews();
+        double avg = data.avgStars();
 
         HBox ratingRow = new HBox(10);
         Label score = new Label("★ " + String.format("%.1f", avg));
@@ -228,7 +287,7 @@ public class CustomerDashboardController {
 
         HBox featureRow = new HBox(8);
         featureRow.getStyleClass().add("hotel-feature-row");
-        for (String feature : buildFeatures(rooms)) {
+        for (String feature : data.features()) {
             Label chip = new Label(feature);
             chip.getStyleClass().add("hotel-feature-chip");
             featureRow.getChildren().add(chip);
@@ -236,7 +295,7 @@ public class CustomerDashboardController {
 
         HBox priceRow = new HBox();
         priceRow.getStyleClass().add("hotel-price-row");
-        Label price = new Label(formatMinPrice(rooms));
+        Label price = new Label(data.minPriceText());
         price.getStyleClass().add("hotel-price-label");
         Button bookNow = new Button("Book Now");
         bookNow.getStyleClass().add("hotel-book-btn");
@@ -267,13 +326,12 @@ public class CustomerDashboardController {
         });
     }
 
-    private Image resolveCoverImage(Hotel hotel) {
+    private Image resolveCoverImage(Hotel hotel, List<Room> rooms) {
         if (hotel != null && hotel.getImagePath() != null && !hotel.getImagePath().isBlank()) {
             Image img = ImageStorageService.loadFxImage(hotel.getImagePath());
             if (img != null) return img;
         }
-        if (hotel != null) {
-            List<Room> rooms = roomService.getRoomsByHotelId(hotel.getId());
+        if (hotel != null && rooms != null) {
             for (Room room : rooms) {
                 if (room.getImagePath() != null && !room.getImagePath().isBlank()) {
                     Image img = ImageStorageService.loadFxImage(room.getImagePath());
@@ -315,6 +373,153 @@ public class CustomerDashboardController {
         MainApp.navigateTo("room-search.fxml");
     }
 
+    @FXML
+    private void handleToggleFavoritesFilter() {
+        showOnlyFavorites = !showOnlyFavorites;
+        visibleHotelCount = PAGE_SIZE;
+        refreshFavoriteFilterButton();
+        renderHotelCardsAsync();
+    }
+
+    @FXML
+    private void handleLoadMoreHotels() {
+        visibleHotelCount += PAGE_SIZE;
+        renderHotelCardsAsync();
+    }
+
+    private void setupInfiniteScroll() {
+        if (hotelScrollPane == null) return;
+        hotelScrollPane.vvalueProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal == null) return;
+            if (newVal.doubleValue() < 0.92) return;
+            if (autoLoadingMore) return;
+            int total = getFilteredHotels().size();
+            if (visibleHotelCount >= total) return;
+            autoLoadingMore = true;
+            visibleHotelCount += PAGE_SIZE;
+            renderHotelCardsAsync();
+        });
+    }
+
+    private void handleFavoriteToggle(Hotel hotel, Button sourceButton) {
+        if (hotel == null) return;
+        User user = SessionManager.getInstance().getLoggedInUser();
+        if (user == null) return;
+        playFavoritePopAnimation(sourceButton, () -> {
+            sourceButton.setDisable(true);
+            sourceButton.setOpacity(0.8);
+            backgroundExecutor.submit(() -> {
+                boolean nowFavorite = favoriteHotelService.toggleFavorite(user.getId(), hotel.getId());
+                Platform.runLater(() -> {
+                    if (nowFavorite) {
+                        favoriteHotelIds.add(hotel.getId());
+                    } else {
+                        favoriteHotelIds.remove(hotel.getId());
+                    }
+                    refreshFavoriteFilterButton();
+                    if (showOnlyFavorites && !nowFavorite) {
+                        renderHotelCardsAsync();
+                    } else {
+                        updateFavoriteIcon(sourceButton, nowFavorite);
+                    }
+                    sourceButton.setDisable(false);
+                    sourceButton.setOpacity(1.0);
+                });
+            });
+        });
+    }
+
+    private void updateFavoriteIcon(Button favoriteButton, boolean isFavorite) {
+        SVGPath heart = new SVGPath();
+        heart.setContent("M12 21s-6.7-4.35-9.33-8.24C0.54 9.62 1.6 5.52 4.86 4.2c2.2-.89 4.2-.08 5.39 1.41 1.19-1.49 3.19-2.3 5.39-1.41 3.26 1.32 4.32 5.42 2.19 8.56C18.7 16.65 12 21 12 21z");
+        heart.setScaleX(0.82);
+        heart.setScaleY(0.82);
+        heart.setFill(isFavorite ? Color.web("#dc2626") : Color.TRANSPARENT);
+        heart.setStroke(isFavorite ? Color.web("#dc2626") : Color.web("#f8fafc"));
+        heart.setStrokeWidth(1.8);
+        favoriteButton.setGraphic(heart);
+    }
+
+    private void playFavoritePopAnimation(Button button, Runnable onFinished) {
+        ScaleTransition popIn = new ScaleTransition(Duration.millis(95), button);
+        popIn.setToX(1.18);
+        popIn.setToY(1.18);
+        ScaleTransition popOut = new ScaleTransition(Duration.millis(120), button);
+        popOut.setToX(1.0);
+        popOut.setToY(1.0);
+        popIn.setOnFinished(e -> popOut.playFromStart());
+        popOut.setOnFinished(e -> {
+            button.setScaleX(1.0);
+            button.setScaleY(1.0);
+            if (onFinished != null) onFinished.run();
+        });
+        popIn.playFromStart();
+    }
+
+    private List<HotelCardData> prepareCardData(List<Hotel> hotels) {
+        if (hotels == null || hotels.isEmpty()) return List.of();
+        Map<Integer, List<Room>> roomMap = new HashMap<>();
+        List<HotelCardData> out = new ArrayList<>();
+        for (Hotel hotel : hotels) {
+            List<Room> rooms = roomService.getRoomsByHotelId(hotel.getId());
+            roomMap.put(hotel.getId(), rooms);
+        }
+        for (Hotel hotel : hotels) {
+            List<Room> rooms = roomMap.getOrDefault(hotel.getId(), List.of());
+            List<HotelReview> reviews = hotelReviewService.getReviewsForHotel(hotel.getId());
+            double avg = hotelReviewService.getAverageStarsForHotel(hotel.getId());
+            Image cover = resolveCoverImage(hotel, rooms);
+            List<String> features = buildFeatures(rooms);
+            String minPriceText = formatMinPrice(rooms);
+            out.add(new HotelCardData(hotel, rooms, reviews, avg, cover, features, minPriceText));
+        }
+        return out;
+    }
+
+    private int pickFeaturedHotelId(List<HotelCardData> cardDataList) {
+        return cardDataList.stream()
+            .max(Comparator.comparingDouble(HotelCardData::avgStars))
+            .map(d -> d.hotel().getId())
+            .orElse(-1);
+    }
+
+    private List<Hotel> getFilteredHotels() {
+        if (!showOnlyFavorites) return allHotels;
+        return favoriteHotelService.filterFavoriteHotels(allHotels, favoriteHotelIds);
+    }
+
+    private List<Hotel> limitVisibleHotels(List<Hotel> hotels) {
+        if (hotels == null || hotels.isEmpty()) return List.of();
+        int end = Math.min(visibleHotelCount, hotels.size());
+        return hotels.subList(0, end);
+    }
+
+    private boolean isFavoriteHotel(int hotelId) {
+        return favoriteHotelIds.contains(hotelId);
+    }
+
+    private void refreshFavoriteFilterButton() {
+        if (favoriteFilterButton == null) return;
+        favoriteFilterButton.getStyleClass().remove("btn-primary");
+        if (showOnlyFavorites) {
+            favoriteFilterButton.setText("All Hotels");
+            favoriteFilterButton.getStyleClass().add("btn-primary");
+        } else {
+            favoriteFilterButton.setText("My Favorites");
+        }
+    }
+
+    private void refreshLoadMoreButton(int totalHotels, int shownHotels) {
+        autoLoadingMore = false;
+        if (loadMoreButton == null) return;
+        boolean hasMore = totalHotels > shownHotels;
+        loadMoreButton.setVisible(hasMore);
+        loadMoreButton.setManaged(hasMore);
+        if (hasMore) {
+            loadMoreButton.setText("Load More (" + shownHotels + "/" + totalHotels + ")");
+        }
+    }
+
     private String joinNonBlank(String first, String second) {
         String a = first == null ? "" : first.trim();
         String b = second == null ? "" : second.trim();
@@ -327,4 +532,14 @@ public class CustomerDashboardController {
         if (value == null || value.isBlank()) return fallback;
         return value;
     }
+
+    private record HotelCardData(
+        Hotel hotel,
+        List<Room> rooms,
+        List<HotelReview> reviews,
+        double avgStars,
+        Image coverImage,
+        List<String> features,
+        String minPriceText
+    ) {}
 }

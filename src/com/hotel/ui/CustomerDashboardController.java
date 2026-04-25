@@ -20,13 +20,16 @@ import javafx.beans.value.ObservableNumberValue;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.ToggleButton;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.paint.Color;
 import javafx.geometry.HPos;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -52,12 +55,14 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class CustomerDashboardController {
 
+    @FXML private BorderPane rootPane;
     @FXML private Label welcomeLabel;
     @FXML private Label supportStatusLabel;
     @FXML private GridPane hotelCardContainer;
     @FXML private Button favoriteFilterButton;
     @FXML private ScrollPane hotelScrollPane;
     @FXML private Button loadMoreButton;
+    @FXML private ToggleButton darkModeButton;
 
     private final HotelService hotelService = new HotelService();
     private final HotelReviewService hotelReviewService = new HotelReviewService();
@@ -81,6 +86,7 @@ public class CustomerDashboardController {
     private boolean pendingAppend = false;
     private boolean hasCompletedInitialRender = false;
     private boolean isNearBottomForLoadMore = false;
+    private boolean darkModeEnabled = false;
     private final Map<Integer, HotelCardData> hotelCardDataCache = new java.util.concurrent.ConcurrentHashMap<>();
 
     @FXML
@@ -93,6 +99,15 @@ public class CustomerDashboardController {
         if (user != null) {
             favoriteHotelIds = new LinkedHashSet<>(favoriteHotelService.getFavoriteHotelIdsForUser(user.getId()));
         }
+        darkModeEnabled = SessionManager.getInstance().isDarkModeEnabled();
+        if (darkModeButton != null) {
+            Region thumb = new Region();
+            thumb.getStyleClass().add("dark-mode-switch-thumb");
+            darkModeButton.setGraphic(thumb);
+            darkModeButton.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+            darkModeButton.setSelected(darkModeEnabled);
+        }
+        applyTheme();
         hotelCardDataCache.clear();
         setupHotelGridColumns();
         setupInfiniteScroll();
@@ -429,6 +444,14 @@ public class CustomerDashboardController {
     }
 
     @FXML
+    private void handleToggleDarkMode() {
+        if (darkModeButton == null) return;
+        darkModeEnabled = darkModeButton.isSelected();
+        SessionManager.getInstance().setDarkModeEnabled(darkModeEnabled);
+        applyTheme();
+    }
+
+    @FXML
     private void handleLoadMoreHotels() {
         int total = getFilteredHotels().size();
         if (visibleHotelCount >= total) {
@@ -673,6 +696,20 @@ public class CustomerDashboardController {
             favoriteFilterButton.getStyleClass().add("btn-primary");
         } else {
             favoriteFilterButton.setText("My Favorites");
+        }
+    }
+
+    private void applyTheme() {
+        if (rootPane == null) return;
+        if (darkModeEnabled) {
+            if (!rootPane.getStyleClass().contains("dark-mode")) {
+                rootPane.getStyleClass().add("dark-mode");
+            }
+        } else {
+            rootPane.getStyleClass().remove("dark-mode");
+        }
+        if (darkModeButton != null) {
+            darkModeButton.setSelected(darkModeEnabled);
         }
     }
 

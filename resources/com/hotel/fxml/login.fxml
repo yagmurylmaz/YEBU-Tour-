@@ -8,11 +8,16 @@
 
 <StackPane xmlns:fx="http://javafx.com/fxml"
            fx:controller="com.hotel.ui.LoginController"
+           fx:id="rootPane"
            styleClass="root-pane">
 
     <VBox alignment="CENTER" spacing="0" maxWidth="440" maxHeight="560"
           styleClass="card">
 <VBox alignment="CENTER" spacing="10" styleClass="card-header">
+            <HBox alignment="CENTER_RIGHT" maxWidth="Infinity">
+                <Region HBox.hgrow="ALWAYS"/>
+                <ToggleButton fx:id="darkModeButton" onAction="#handleToggleDarkMode" styleClass="dark-mode-switch"/>
+            </HBox>
             <ImageView fitHeight="96.0" preserveRatio="true" pickOnBounds="true" styleClass="brand-logo-img">
                 <image>
                     <Image url="@../images/logo-yebu.png"/>

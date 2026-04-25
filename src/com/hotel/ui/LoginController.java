@@ -4,7 +4,10 @@ import com.hotel.MainApp;
 import com.hotel.model.User;
 import com.hotel.service.AuthService;
 import javafx.fxml.FXML;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.*;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 
 import java.util.Optional;
 import java.util.prefs.Preferences;
@@ -18,6 +21,8 @@ public class LoginController {
     @FXML private CheckBox rememberMeCheckBox;
     @FXML private Button loginButton;
     @FXML private Label errorLabel;
+    @FXML private StackPane rootPane;
+    @FXML private ToggleButton darkModeButton;
 
     private final AuthService authService = new AuthService();
     private final Preferences prefs = Preferences.userNodeForPackage(LoginController.class);
@@ -71,8 +76,41 @@ public class LoginController {
     @FXML
     private void initialize() {
         errorLabel.setVisible(false);
+        setupDarkModeSwitch();
+        applyThemeFromSession();
         loadRememberMe();
         tryAutoLogin();
+    }
+
+    @FXML
+    private void handleToggleDarkMode() {
+        if (darkModeButton == null) return;
+        SessionManager.getInstance().setDarkModeEnabled(darkModeButton.isSelected());
+        applyThemeFromSession();
+    }
+
+    private void setupDarkModeSwitch() {
+        if (darkModeButton == null) return;
+        Region thumb = new Region();
+        thumb.getStyleClass().add("dark-mode-switch-thumb");
+        darkModeButton.setGraphic(thumb);
+        darkModeButton.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+        darkModeButton.setSelected(SessionManager.getInstance().isDarkModeEnabled());
+    }
+
+    private void applyThemeFromSession() {
+        if (rootPane == null) return;
+        boolean darkMode = SessionManager.getInstance().isDarkModeEnabled();
+        if (darkMode) {
+            if (!rootPane.getStyleClass().contains("dark-mode")) {
+                rootPane.getStyleClass().add("dark-mode");
+            }
+        } else {
+            rootPane.getStyleClass().remove("dark-mode");
+        }
+        if (darkModeButton != null) {
+            darkModeButton.setSelected(darkMode);
+        }
     }
 
     private void loadRememberMe() {

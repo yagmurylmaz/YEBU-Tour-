@@ -7,6 +7,7 @@
 
 <BorderPane xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.hotel.ui.CustomerDashboardController"
+            fx:id="rootPane"
             styleClass="root-pane" prefWidth="900" prefHeight="620">
 <top>
         <HBox styleClass="top-nav" alignment="CENTER_LEFT" spacing="12">
@@ -18,6 +19,7 @@
             <Text text="YEBU Tour" styleClass="nav-brand"/>
             <Region HBox.hgrow="ALWAYS"/>
             <Label fx:id="welcomeLabel" styleClass="nav-welcome"/>
+            <ToggleButton fx:id="darkModeButton" onAction="#handleToggleDarkMode" styleClass="dark-mode-switch"/>
             <Button fx:id="favoriteFilterButton" text="My Favorites" onAction="#handleToggleFavoritesFilter" styleClass="btn-outline-sm"/>
             <Button text="My Reservations" onAction="#handleMyReservations" styleClass="btn-outline-sm"/>
             <Button text="Log Out" onAction="#handleLogout" styleClass="btn-outline-sm"/>

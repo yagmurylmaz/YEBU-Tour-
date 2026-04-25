@@ -8,6 +8,7 @@ public class SessionManager {
 
     private static SessionManager instance;
     private User loggedInUser;
+    private boolean darkModeEnabled;
 
     private SessionManager() {}
 
@@ -26,6 +27,14 @@ public class SessionManager {
 
     public void logout() {
         this.loggedInUser = null;
+    }
+
+    public boolean isDarkModeEnabled() {
+        return darkModeEnabled;
+    }
+
+    public void setDarkModeEnabled(boolean darkModeEnabled) {
+        this.darkModeEnabled = darkModeEnabled;
     }
 
     public boolean isAdmin() {

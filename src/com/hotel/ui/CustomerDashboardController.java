@@ -86,6 +86,7 @@ public class CustomerDashboardController {
     private boolean pendingAppend = false;
     private boolean hasCompletedInitialRender = false;
     private boolean isNearBottomForLoadMore = false;
+    private boolean lastRenderFailed = false;
     private boolean darkModeEnabled = false;
     private final Map<Integer, HotelCardData> hotelCardDataCache = new java.util.concurrent.ConcurrentHashMap<>();
 
@@ -201,7 +202,7 @@ public class CustomerDashboardController {
         if (!append) {
             activeFilterKey = filterKey;
             renderedHotelCount = 0;
-            if (!hasCompletedInitialRender) {
+            if (!hasCompletedInitialRender || lastRenderFailed) {
                 hotelCardContainer.getChildren().clear();
                 showSkeletonCards();
             }
@@ -229,6 +230,7 @@ public class CustomerDashboardController {
         GridPane.setHalignment(error, HPos.CENTER);
         autoLoadingMore = false;
         pendingAppend = false;
+        lastRenderFailed = true;
         refreshLoadMoreButton();
         System.err.println("[CustomerDashboard] Hotel render failed: " + ex.getMessage());
     }
@@ -249,6 +251,7 @@ public class CustomerDashboardController {
             GridPane.setHalignment(empty, HPos.CENTER);
             autoLoadingMore = false;
             hasCompletedInitialRender = true;
+            lastRenderFailed = false;
             refreshLoadMoreButton();
             return;
         }
@@ -269,6 +272,7 @@ public class CustomerDashboardController {
         renderedHotelCount = cardDataList.size();
         autoLoadingMore = false;
         hasCompletedInitialRender = true;
+        lastRenderFailed = false;
         refreshLoadMoreButton();
     }
 

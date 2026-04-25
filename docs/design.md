@@ -12,18 +12,21 @@ Layered structure:
 
 ## Class Design (summary)
 
-- `User`, `Customer`, `Room`, `Reservation`, `Service` (+ concrete service types)  
-- `AuthService`, `RoomService`, `ReservationService`, `ReportService`  
-- `UserDAO`, `RoomDAO`, `ReservationDAO`  
+- `User`, `Customer`, `Hotel`, `Room`, `Reservation`, `HotelReview`, `Service` (+ concrete service types)  
+- `AuthService`, `HotelService`, `RoomService`, `ReservationService`, `ReportService`, `FavoriteHotelService`, `HotelReviewService`  
+- `UserDAO`, `HotelDAO`, `RoomDAO`, `ReservationDAO`, `FavoriteHotelDAO`, `HotelReviewDAO`  
 - `DatabaseConnection`, `DatabaseInitializer`  
 
 ## Data Design
 
-CSV files:
+MySQL tables (core):
 
-- `users.csv` — id, fullName, email, passwordHash, phone, role  
-- `rooms.csv` — id, roomNo, roomType, price, capacity, description, available  
-- `reservations.csv` — id, customerId, roomId, checkIn, checkOut, total, status, createdAt  
+- `users` — id, full_name, email, password_hash, phone, role  
+- `hotels` — id, name, city_id, country_id, image_path, description  
+- `rooms` — id, hotel_id, room_no, room_type, price_per_night, capacity, description, available  
+- `reservations` — id, customer_id, room_id, check_in_date, check_out_date, total_price, status, created_at
+- `hotel_reviews` — id, hotel_id, user_id, stars, comment, created_at
+- `favorite_hotels` — user_id, hotel_id, created_at
 
 ## Interface Design
 
@@ -35,6 +38,7 @@ Main screens:
 - Room search  
 - Reservation confirmation  
 - My reservations  
+- Forgot password / Reset password
 - Admin dashboard  
 - Admin rooms  
 - Admin reports  
@@ -44,3 +48,4 @@ Main screens:
 - Login → Admin dashboard / Customer dashboard  
 - Customer dashboard → Room search / My reservations  
 - Admin dashboard → Admin rooms / Admin reports  
+- Login/Register/Reset screens share the same session-backed theme toggle (dark/light mode).

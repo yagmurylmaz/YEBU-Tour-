@@ -23,6 +23,8 @@ class User
 class Customer
 class Room
 class Reservation
+class Hotel
+class HotelReview
 class Service
 class BreakfastService
 class GymService
@@ -41,10 +43,13 @@ IReservationService <|.. ReservationService
 
 class IUserDAO
 class UserDAO
+class HotelDAO
 class IRoomDAO
 class RoomDAO
 class IReservationDAO
 class ReservationDAO
+class FavoriteHotelDAO
+class HotelReviewDAO
 
 IUserDAO <|.. UserDAO
 IRoomDAO <|.. RoomDAO
@@ -64,7 +69,7 @@ flowchart TD
     F --> G[Optional services selected]
     G --> H[Total price calculated]
     H --> I[Create reservation]
-    I --> J[Persist to storage]
+    I --> J[Persist to MySQL]
     J --> K[Show success message]
     K --> L[End]
 ```

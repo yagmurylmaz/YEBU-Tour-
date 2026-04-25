@@ -8,8 +8,9 @@
 6. Implementation Details
 7. Testing
 8. Results and Discussion
-9. Conclusion
-10. Future Improvements
+9. Deployment and Operations (Local + AWS)
+10. Conclusion
+11. Future Improvements
 
 ## Commit History Note
 

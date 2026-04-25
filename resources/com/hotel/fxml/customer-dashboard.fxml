@@ -32,6 +32,10 @@
                     <GridPane fx:id="hotelCardContainer" hgap="16" vgap="16" alignment="TOP_CENTER" styleClass="hotel-grid"/>
                 </content>
             </ScrollPane>
+            <Button fx:id="loadMoreButton"
+                    text="Load More"
+                    onAction="#handleLoadMoreHotels"
+                    styleClass="load-more-header-btn"/>
         </VBox>
     </center>
 

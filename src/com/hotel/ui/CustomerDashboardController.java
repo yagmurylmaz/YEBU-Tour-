@@ -57,6 +57,7 @@ public class CustomerDashboardController {
     @FXML private GridPane hotelCardContainer;
     @FXML private Button favoriteFilterButton;
     @FXML private ScrollPane hotelScrollPane;
+    @FXML private Button loadMoreButton;
 
     private final HotelService hotelService = new HotelService();
     private final HotelReviewService hotelReviewService = new HotelReviewService();
@@ -79,6 +80,7 @@ public class CustomerDashboardController {
     private int renderedHotelCount = 0;
     private boolean pendingAppend = false;
     private boolean hasCompletedInitialRender = false;
+    private boolean isNearBottomForLoadMore = false;
     private final Map<Integer, HotelCardData> hotelCardDataCache = new java.util.concurrent.ConcurrentHashMap<>();
 
     @FXML
@@ -95,6 +97,8 @@ public class CustomerDashboardController {
         setupHotelGridColumns();
         setupInfiniteScroll();
         refreshFavoriteFilterButton();
+        refreshLoadMoreButton();
+        Platform.runLater(this::updateLoadMoreVisibilityFromScroll);
         renderHotelCardsAsync();
     }
 
@@ -210,6 +214,7 @@ public class CustomerDashboardController {
         GridPane.setHalignment(error, HPos.CENTER);
         autoLoadingMore = false;
         pendingAppend = false;
+        refreshLoadMoreButton();
         System.err.println("[CustomerDashboard] Hotel render failed: " + ex.getMessage());
     }
 
@@ -229,6 +234,7 @@ public class CustomerDashboardController {
             GridPane.setHalignment(empty, HPos.CENTER);
             autoLoadingMore = false;
             hasCompletedInitialRender = true;
+            refreshLoadMoreButton();
             return;
         }
 
@@ -248,6 +254,7 @@ public class CustomerDashboardController {
         renderedHotelCount = cardDataList.size();
         autoLoadingMore = false;
         hasCompletedInitialRender = true;
+        refreshLoadMoreButton();
     }
 
     private VBox createHotelCard(HotelCardData data, boolean featured) {
@@ -417,22 +424,31 @@ public class CustomerDashboardController {
         showOnlyFavorites = !showOnlyFavorites;
         visibleHotelCount = PAGE_SIZE;
         refreshFavoriteFilterButton();
+        refreshLoadMoreButton();
+        renderHotelCardsAsync();
+    }
+
+    @FXML
+    private void handleLoadMoreHotels() {
+        int total = getFilteredHotels().size();
+        if (visibleHotelCount >= total) {
+            refreshLoadMoreButton();
+            return;
+        }
+        autoLoadingMore = true;
+        pendingAppend = true;
+        visibleHotelCount += PAGE_SIZE;
+        refreshLoadMoreButton();
         renderHotelCardsAsync();
     }
 
     private void setupInfiniteScroll() {
         if (hotelScrollPane == null) return;
-        hotelScrollPane.vvalueProperty().addListener((obs, oldVal, newVal) -> {
-            if (newVal == null) return;
-            if (newVal.doubleValue() < 0.92) return;
-            if (autoLoadingMore) return;
-            int total = getFilteredHotels().size();
-            if (visibleHotelCount >= total) return;
-            autoLoadingMore = true;
-            pendingAppend = true;
-            visibleHotelCount += PAGE_SIZE;
-            renderHotelCardsAsync();
-        });
+        hotelScrollPane.vvalueProperty().addListener((obs, oldVal, newVal) -> updateLoadMoreVisibilityFromScroll());
+        hotelScrollPane.viewportBoundsProperty().addListener((obs, oldVal, newVal) -> updateLoadMoreVisibilityFromScroll());
+        if (hotelScrollPane.getContent() != null) {
+            hotelScrollPane.getContent().layoutBoundsProperty().addListener((obs, oldVal, newVal) -> updateLoadMoreVisibilityFromScroll());
+        }
     }
 
     private void handleFavoriteToggle(Hotel hotel, Button sourceButton) {
@@ -658,6 +674,26 @@ public class CustomerDashboardController {
         } else {
             favoriteFilterButton.setText("My Favorites");
         }
+    }
+
+    private void refreshLoadMoreButton() {
+        if (loadMoreButton == null) return;
+        int total = getFilteredHotels().size();
+        boolean hasMore = visibleHotelCount < total;
+        boolean shouldShow = hasMore && isNearBottomForLoadMore;
+        loadMoreButton.setVisible(shouldShow);
+        loadMoreButton.setManaged(shouldShow);
+        loadMoreButton.setDisable(autoLoadingMore);
+        if (hasMore) {
+            int remaining = Math.max(total - visibleHotelCount, 0);
+            loadMoreButton.setText("Load More (" + remaining + " left)");
+        }
+    }
+
+    private void updateLoadMoreVisibilityFromScroll() {
+        if (hotelScrollPane == null) return;
+        isNearBottomForLoadMore = hotelScrollPane.getVvalue() >= 0.97;
+        refreshLoadMoreButton();
     }
 
     private String buildFilterKey(List<Hotel> hotels) {

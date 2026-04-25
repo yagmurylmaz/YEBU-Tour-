@@ -151,6 +151,20 @@
     -fx-border-color: #ffffff;
 }
 
+.load-more-header-btn {
+    -fx-background-color: linear-gradient(to right, #0f172a 0%, #134e4a 60%, #115e59 100%);
+    -fx-text-fill: #ffffff;
+    -fx-font-weight: 700;
+    -fx-background-radius: 12;
+    -fx-padding: 9 16;
+    -fx-border-color: transparent;
+    -fx-cursor: hand;
+}
+
+.load-more-header-btn:hover {
+    -fx-background-color: linear-gradient(to right, #1e293b 0%, #0f766e 100%);
+}
+
 .top-nav-secondary {
     -fx-padding: 0 0 2 0;
 }

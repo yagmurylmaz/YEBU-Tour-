@@ -42,7 +42,6 @@ import java.awt.Desktop;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -79,6 +78,8 @@ public class CustomerDashboardController {
     private String activeFilterKey = "";
     private int renderedHotelCount = 0;
     private boolean pendingAppend = false;
+    private boolean hasCompletedInitialRender = false;
+    private final Map<Integer, HotelCardData> hotelCardDataCache = new java.util.concurrent.ConcurrentHashMap<>();
 
     @FXML
     private void initialize() {
@@ -90,6 +91,7 @@ public class CustomerDashboardController {
         if (user != null) {
             favoriteHotelIds = new LinkedHashSet<>(favoriteHotelService.getFavoriteHotelIdsForUser(user.getId()));
         }
+        hotelCardDataCache.clear();
         setupHotelGridColumns();
         setupInfiniteScroll();
         refreshFavoriteFilterButton();
@@ -180,15 +182,17 @@ public class CustomerDashboardController {
         if (!append) {
             activeFilterKey = filterKey;
             renderedHotelCount = 0;
-            hotelCardContainer.getChildren().clear();
-            showSkeletonCards();
+            if (!hasCompletedInitialRender) {
+                hotelCardContainer.getChildren().clear();
+                showSkeletonCards();
+            }
         }
-        List<Hotel> hotels = limitVisibleHotels(filteredHotels);
         backgroundExecutor.submit(() -> {
             try {
-                List<HotelCardData> cardDataList = prepareCardData(hotels);
-                int featuredHotelId = pickFeaturedHotelId(filteredHotels);
-                Platform.runLater(() -> renderPreparedCards(token, cardDataList, featuredHotelId, append, filterKey));
+                List<HotelCardData> filteredCardData = prepareCardData(filteredHotels);
+                List<HotelCardData> visibleCardData = limitVisibleCardData(filteredCardData);
+                int featuredHotelId = pickFeaturedHotelId(filteredCardData);
+                Platform.runLater(() -> renderPreparedCards(token, visibleCardData, featuredHotelId, append, filterKey));
             } catch (Exception ex) {
                 Platform.runLater(() -> renderLoadingError(token, ex));
             }
@@ -224,6 +228,7 @@ public class CustomerDashboardController {
             GridPane.setColumnSpan(empty, 3);
             GridPane.setHalignment(empty, HPos.CENTER);
             autoLoadingMore = false;
+            hasCompletedInitialRender = true;
             return;
         }
 
@@ -242,6 +247,7 @@ public class CustomerDashboardController {
         }
         renderedHotelCount = cardDataList.size();
         autoLoadingMore = false;
+        hasCompletedInitialRender = true;
     }
 
     private VBox createHotelCard(HotelCardData data, boolean featured) {
@@ -397,7 +403,7 @@ public class CustomerDashboardController {
     private String formatMinPrice(List<Room> rooms) {
         if (rooms == null || rooms.isEmpty()) return "See rooms";
         double min = rooms.stream().map(Room::getPricePerNight).min(Comparator.naturalOrder()).orElse(0.0);
-        return String.format("$%.0f / night", min);
+        return String.format("₺%.0f / night", min);
     }
 
     private void openRoomSearchForHotel(Hotel hotel) {
@@ -578,40 +584,48 @@ public class CustomerDashboardController {
 
     private List<HotelCardData> prepareCardData(List<Hotel> hotels) {
         if (hotels == null || hotels.isEmpty()) return List.of();
-        Map<Integer, List<Room>> roomMap = new HashMap<>();
         List<HotelCardData> out = new ArrayList<>();
         for (Hotel hotel : hotels) {
-            List<Room> rooms = roomService.getRoomsByHotelId(hotel.getId());
-            roomMap.put(hotel.getId(), rooms);
-        }
-        for (Hotel hotel : hotels) {
-            List<Room> rooms = roomMap.getOrDefault(hotel.getId(), List.of());
-            List<HotelReview> reviews = hotelReviewService.getReviewsForHotel(hotel.getId());
-            double avg = hotelReviewService.getAverageStarsForHotel(hotel.getId());
-            Image cover = resolveCoverImage(hotel, rooms);
-            List<String> features = buildFeatures(rooms);
-            String minPriceText = formatMinPrice(rooms);
-            out.add(new HotelCardData(hotel, rooms, reviews, avg, cover, features, minPriceText));
+            HotelCardData cached = hotelCardDataCache.get(hotel.getId());
+            if (cached == null || cached.hotel() == null || !sameHotelSnapshot(cached.hotel(), hotel)) {
+                cached = buildHotelCardData(hotel);
+                hotelCardDataCache.put(hotel.getId(), cached);
+            }
+            out.add(cached);
         }
         return out;
     }
 
-    private int pickFeaturedHotelId(List<Hotel> hotels) {
-        if (hotels == null || hotels.isEmpty()) return -1;
-        int featuredId = hotels.get(0).getId();
+    private HotelCardData buildHotelCardData(Hotel hotel) {
+        List<Room> rooms = roomService.getRoomsByHotelId(hotel.getId());
+        List<HotelReview> reviews = hotelReviewService.getReviewsForHotel(hotel.getId());
+        double avg = hotelReviewService.getAverageStarsForHotel(hotel.getId());
+        Image cover = resolveCoverImage(hotel, rooms);
+        List<String> features = buildFeatures(rooms);
+        String minPriceText = formatMinPrice(rooms);
+        return new HotelCardData(hotel, rooms, reviews, avg, cover, features, minPriceText);
+    }
+
+    private int pickFeaturedHotelId(List<HotelCardData> cardDataList) {
+        if (cardDataList == null || cardDataList.isEmpty()) return -1;
+        int featuredId = cardDataList.get(0).hotel().getId();
         double maxAvg = -1.0;
-        for (Hotel h : hotels) {
-            try {
-                double avg = hotelReviewService.getAverageStarsForHotel(h.getId());
-                if (avg > maxAvg) {
-                    maxAvg = avg;
-                    featuredId = h.getId();
-                }
-            } catch (Exception ignored) {
-                // keep rendering even if one hotel's review average fails
+        for (HotelCardData data : cardDataList) {
+            if (data.avgStars() > maxAvg) {
+                maxAvg = data.avgStars();
+                featuredId = data.hotel().getId();
             }
         }
         return featuredId;
+    }
+
+    private boolean sameHotelSnapshot(Hotel cached, Hotel latest) {
+        if (cached == null || latest == null) return false;
+        return cached.getId() == latest.getId()
+            && java.util.Objects.equals(cached.getName(), latest.getName())
+            && java.util.Objects.equals(cached.getCityName(), latest.getCityName())
+            && java.util.Objects.equals(cached.getCountryName(), latest.getCountryName())
+            && java.util.Objects.equals(cached.getImagePath(), latest.getImagePath());
     }
 
     private List<Hotel> getFilteredHotels() {
@@ -623,6 +637,12 @@ public class CustomerDashboardController {
         if (hotels == null || hotels.isEmpty()) return List.of();
         int end = Math.min(visibleHotelCount, hotels.size());
         return hotels.subList(0, end);
+    }
+
+    private List<HotelCardData> limitVisibleCardData(List<HotelCardData> cardData) {
+        if (cardData == null || cardData.isEmpty()) return List.of();
+        int end = Math.min(visibleHotelCount, cardData.size());
+        return cardData.subList(0, end);
     }
 
     private boolean isFavoriteHotel(int hotelId) {
